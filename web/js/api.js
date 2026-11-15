@@ -1,31 +1,35 @@
 // 서버 통신. 같은 출처의 /api 만 호출한다.
-// 읽기는 누구나, 저장은 편집 암호가 있어야 한다. 암호는 이 기기 브라우저에만 저장한다.
+// 읽기는 누구나, 숨기기·삭제·지금 확인은 편집 암호가 있어야 한다. 암호는 이 기기 브라우저에만 저장한다.
 
 const TOKEN_KEY = 'app-write-token';
 export function getToken() { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; } }
 export function setToken(t) { try { t ? localStorage.setItem(TOKEN_KEY, t) : localStorage.removeItem(TOKEN_KEY); } catch (e) { /* 저장 공간이 없으면 이번 화면에서만 쓴다 */ } }
-const auth = () => { const t = getToken(); return t ? { Authorization: 'Bearer ' + t } : {}; };
+let memoryToken = '';
+const token = () => getToken() || memoryToken;
+export function rememberToken(t) { memoryToken = t; setToken(t); }
+const auth = () => { const t = token(); return t ? { Authorization: 'Bearer ' + t } : {}; };
 
-export async function getDoc() {
-  const res = await fetch('/api/doc', { cache: 'no-store', headers: auth() });
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  return res.json();
-}
-
-// 성공 { ok: true, version } / 충돌 { ok: false, conflict: true, doc, version } / 암호 없음·틀림 { ok: false, unauthorized: true }
-export async function putDoc(doc, version) {
-  const res = await fetch('/api/doc', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json', ...auth() },
-    body: JSON.stringify({ doc, version }),
+async function call(method, path, body) {
+  const res = await fetch(path, {
+    method, cache: 'no-store',
+    headers: { ...(body ? { 'Content-Type': 'application/json' } : {}), ...auth() },
+    body: body ? JSON.stringify(body) : undefined,
   });
-  if (res.status === 409) return { ok: false, conflict: true, ...(await res.json()) };
-  if (res.status === 401) return { ok: false, unauthorized: true };
-  if (!res.ok) throw new Error('HTTP ' + res.status);
-  return { ok: true, ...(await res.json()) };
+  const j = await res.json().catch(() => ({}));
+  return { status: res.status, ok: res.ok, data: j }; // data: 서버가 보낸 JSON(이름이 겹치지 않게 따로 둔다)
 }
 
-// 서버 상태. passwordSet이 false면 아직 편집 암호가 없다(처음 저장할 때 화면에서 정한다).
+// {apps, canEdit}
+export async function getApps() {
+  const r = await call('GET', '/api/apps');
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.data;
+}
+export const setHidden = (url, hidden) => call('PUT', '/api/apps', { url, hidden });
+export const removeApp = url => call('DELETE', '/api/apps?url=' + encodeURIComponent(url));
+export const refreshAll = () => call('POST', '/api/refresh');
+
+// 서버 상태. passwordSet이 false면 아직 편집 암호가 없다(화면에서 처음 정한다).
 export async function getStatus() {
   const res = await fetch('/api/health', { cache: 'no-store' });
   return res.json();

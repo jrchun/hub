@@ -37,7 +37,7 @@ test('wrangler.toml 읽기', () => {
   assert.equal(c.main, './src/worker.js');
   assert.equal(c.assetsDir, './web');
   assert.equal(c.d1.binding, 'DB');
-  assert.deepEqual(c.crons, ['30 22 * * *']);
+  assert.deepEqual(c.crons, ['0 23 * * *']);
   const t = parseToml('a = "x" # 주석\n[vars]\nK = "v"\n[[d1_databases]]\nid = "1"\n[[d1_databases]]\nid = "2"\n');
   assert.deepEqual(t, { top: { a: 'x' }, tables: { vars: { K: 'v' } }, arrays: { d1_databases: [{ id: '1' }, { id: '2' }] } });
 });
@@ -208,7 +208,7 @@ test('deploy(예비): 묶음을 올리고 예약 작업과 workers.dev를 켠다
 
 test('묶음: Worker 모듈 전부 + web 파일 전부 + 진입 파일', () => {
   const b = collectBundle(ROOT);
-  for (const m of ['worker.js', 'jobs.js', 'api/doc.js', 'api/password.js', 'lib/http.js', 'lib/bundled_assets.js', '__mcp_entry.js']) assert.ok(b.modules[m], m);
+  for (const m of ['worker.js', 'jobs.js', 'api/apps.js', 'api/register.js', 'lib/hub.js', 'api/password.js', 'lib/http.js', 'lib/bundled_assets.js', '__mcp_entry.js']) assert.ok(b.modules[m], m);
   for (const w of ['index.html', 'styles.css', 'js/app.js']) assert.ok(b.texts['__web/' + w], w);
   const entry = b.modules['__mcp_entry.js'];
   assert.match(entry, /import app from '\.\/worker\.js'/);

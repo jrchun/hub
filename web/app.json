@@ -1,13 +1,13 @@
 {
   "schema": 1,
-  "name": "내 앱",
-  "emoji": "🧩",
-  "summary": "한 줄 설명",
-  "category": "기타",
+  "name": "앱 허브",
+  "emoji": "🗂️",
+  "summary": "내가 만든 앱들을 한 화면에서 보는 곳",
+  "category": "업무",
   "status": "개발중",
   "public": true,
   "mode": "d1",
-  "repo": "",
-  "createdAt": "",
+  "repo": "jrchun/hub",
+  "createdAt": "2026-11-15",
   "updatedAt": ""
 }

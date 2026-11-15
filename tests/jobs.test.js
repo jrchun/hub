@@ -1,47 +1,40 @@
-// 예약 작업(src/jobs.js)과 Worker의 scheduled() 연결(가짜 D1·fetch로 확인). 실행: node --test tests/
+// 예약 작업(src/jobs.js)과 Worker의 scheduled() 연결. D1은 메모리 SQLite, 바깥 요청은 가짜 fetch. 실행: npm test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../src/worker.js';
-import { daily, runScheduled, supabaseKeepalive } from '../src/jobs.js';
+import { daily, runScheduled } from '../src/jobs.js';
+import { makeD1 } from './d1_sqlite.js';
 
-function fakeDB(count = 3) {
-  const log = [];
-  return {
-    log,
-    prepare: sql => ({
-      first: async () => ({ n: count }),
-      bind: (...args) => ({ run: async () => { log.push([sql, args]); return { meta: { changes: 1 } }; } }),
-    }),
-  };
-}
+const offline = async () => { throw new Error('offline'); };
 
-test('daily: 사용 기록 수를 job_log에 남긴다', async () => {
-  const DB = fakeDB(3);
-  assert.equal(await daily({ DB }), '사용 기록 3건');
-  assert.match(DB.log[0][0], /INSERT INTO job_log/);
-  assert.equal(DB.log[0][1][1], 'daily');
-  assert.equal(DB.log[0][1][2], '사용 기록 3건');
+test('daily: 등록된 앱을 확인하고 job_log에 남긴다', async () => {
+  const DB = makeD1();
+  DB.raw.prepare("INSERT INTO apps (url, state, registered_at) VALUES ('https://a.t.workers.dev', 'ok', '2026-11-01T00:00:00Z')").run();
+  const note = await daily({ DB }, offline);
+  assert.equal(note, '앱 1개 중 1개 확인: 정상 0, 응답 없음 1, 허브 준비 전 0');
+  const row = DB.raw.prepare("SELECT job, note FROM job_log").get();
+  assert.deepEqual({ ...row }, { job: 'daily', note });
+  assert.equal(DB.raw.prepare('SELECT fail_count FROM apps').get().fail_count, 1);
 });
 
-test('Supabase 잠들기 방지: 공개 키로 keepalive를 부르고, 실패하면 오류', async () => {
-  const calls = [];
-  const env = { SUPABASE_URL: 'https://abc.supabase.co/', SUPABASE_KEY: 'sb_publishable_x' };
-  const ok = async (url, init) => { calls.push([url, init.headers.apikey]); return new Response('null', { status: 200 }); };
-  assert.equal(await supabaseKeepalive(env, ok), 'Supabase 응답 200');
-  assert.deepEqual(calls[0], ['https://abc.supabase.co/rest/v1/rpc/keepalive', 'sb_publishable_x']);
-  await assert.rejects(supabaseKeepalive(env, async () => new Response('', { status: 404 })), /HTTP 404/);
+test('daily: 90일 넘은 job_log는 지운다', async () => {
+  const DB = makeD1();
+  DB.raw.prepare("INSERT INTO job_log VALUES ('2020-01-01T00:00:00Z', 'daily', 'old')").run();
+  await daily({ DB }, offline);
+  assert.equal(DB.raw.prepare("SELECT COUNT(*) AS n FROM job_log WHERE note = 'old'").get().n, 0);
 });
 
-test('runScheduled: 모드에 맞는 작업만 한다', async () => {
-  assert.equal(await runScheduled({ DB: fakeDB(0) }), '사용 기록 0건');
+test('runScheduled: D1이 없으면 할 일 없음', async () => {
   assert.equal(await runScheduled({}), '할 일 없음');
-  const fetchFn = async () => new Response('null', { status: 200 });
-  assert.equal(await runScheduled({ SUPABASE_URL: 'https://a.supabase.co', SUPABASE_KEY: 'k' }, fetchFn), 'Supabase 응답 200');
 });
 
 test('worker.scheduled가 작업을 waitUntil로 넘긴다', async () => {
-  const DB = fakeDB(1), waits = [];
-  await worker.scheduled({ cron: '30 22 * * *' }, { DB }, { waitUntil: p => waits.push(p) });
-  await Promise.all(waits);
-  assert.equal(DB.log.length, 1);
+  const DB = makeD1(), waits = [];
+  const logs = []; const orig = console.log; console.log = (...a) => logs.push(a);
+  try {
+    await worker.scheduled({ cron: '0 23 * * *' }, { DB }, { waitUntil: p => waits.push(p) });
+    await Promise.all(waits);
+  } finally { console.log = orig; }
+  assert.equal(DB.raw.prepare('SELECT COUNT(*) AS n FROM job_log').get().n, 1);
+  assert.match(String(logs[0]), /예약 작업 완료/);
 });
