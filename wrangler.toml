@@ -2,9 +2,12 @@
 # name, database_name, database_id는 scripts/cf_mcp.mjs fill(또는 wrangler d1 create 출력)로 채운다.
 # 편집 암호는 여기 두지 않는다. 사이트에서 처음 저장할 때 화면에서 정한다(D1에 해시로 저장).
 # 대시보드 › Worker › 설정 › 변수 및 비밀 › Secret WRITE_TOKEN을 넣으면 그것이 우선한다.
-name = "my-app"
+name = "hub"
 main = "./src/worker.js"
 compatibility_date = "2026-11-01"
+# 같은 계정의 다른 workers.dev 앱을 fetch로 불러오려면 꼭 필요하다. 없으면 Cloudflare가 막는다(오류 1042,
+# developers.cloudflare.com/workers/observability/errors). 허브가 앱의 app.json·health를 읽는 데 쓴다.
+compatibility_flags = ["global_fetch_strictly_public"]
 send_metrics = false
 
 # 정적 파일. 요청과 맞는 파일이 있으면 Worker를 거치지 않고 바로 보낸다. 없을 때만 src/worker.js가 실행된다.
@@ -14,9 +17,10 @@ binding = "ASSETS"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "my-app"
-database_id = "__D1_DATABASE_ID__"
+database_name = "hub"
+database_id = "433c78cf-350e-4748-bc5c-b3441810a116"
 
-# 예약 작업(src/jobs.js). UTC 기준: 매일 07:30 KST. 무료 플랜은 계정 전체에서 Cron Trigger 5개까지다.
+# 예약 작업(src/jobs.js): 등록된 앱 둘러보기. UTC 기준이라 23:00 UTC = 매일 08:00 KST.
+# 무료 플랜은 계정 전체에서 Cron Trigger 5개까지다.
 [triggers]
-crons = ["30 22 * * *"]
+crons = ["0 23 * * *"]
