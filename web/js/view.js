@@ -73,3 +73,12 @@ export function linkFor(app) {
   if (app.public === false) return null;
   return /^https:\/\/[a-z0-9.-]+$/.test(app.url || '') ? app.url : null;
 }
+
+// 격자 칸에 쓸 값: 상태 점 색(tone)과 이름 아래 한 줄(sub). 문제가 있으면 그것을, 없으면 사용량을 보여 준다.
+//   tone: ok(정상) | bad(응답 없음) | warn(허브 준비 전) | muted(쉬는 중)
+export function tileInfo(app, now = Date.now()) {
+  const bs = badges(app, now).filter(b => b.text !== '숨김');
+  const tone = app.state === 'down' ? 'bad' : app.state === 'legacy' ? 'warn' : bs.some(b => b.text === '쉬는 중') ? 'muted' : 'ok';
+  const sub = bs.length ? bs[0].text.replace(/ \((\d+)일째\)$/, ' $1일') : app.usage ? `30일 ${app.usage.last30d}회` : (app.category || '');
+  return { tone, sub };
+}

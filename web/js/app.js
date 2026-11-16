@@ -1,12 +1,14 @@
 // 앱 허브 화면: 그리기와 이벤트만 맡는다. 규칙(정렬·배지·링크)은 view.js의 순수 함수에 있다.
 // 앱에서 받은 글자(이름·설명 등)는 textContent로만 넣는다(innerHTML을 쓰지 않는다 = 자동으로 안전 처리).
 import * as api from './api.js';
-import { CATEGORIES, sortApps, filterApps, summarize, displayName, usageText, badges, linkFor } from './view.js';
+import { CATEGORIES, sortApps, filterApps, summarize, displayName, usageText, badges, linkFor, tileInfo } from './view.js';
 
 const $ = id => document.getElementById(id);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 
 let apps = [], canEdit = false, category = '전체', firstTime = false;
+// 보기 방식: 'grid'(3×3 격자) | 'list'(큰 카드). 이 기기에 기억한다.
+let viewMode = (() => { try { return localStorage.getItem('hub-view') || 'grid'; } catch { return 'grid'; } })();
 const status = text => { $('status').textContent = text; };
 
 function renderChips() {
@@ -94,6 +96,20 @@ function card(app) {
   return art;
 }
 
+// 격자 칸: 대표 화면(정사각형) + 이름 한 줄 + 상태 한 줄. 자세한 설명·버튼은 목록 보기에서.
+function tile(app) {
+  const href = linkFor(app);
+  const t = el(href ? 'a' : 'div', 'tile' + (app.hidden ? ' is-hidden' : ''));
+  if (href) { t.href = href; t.target = '_blank'; t.rel = 'noopener noreferrer'; }
+  const { tone, sub } = tileInfo(app);
+  const s = shot(app); s.classList.add('tile-shot');
+  const dot = el('span', 'tile-dot dot-' + tone); dot.setAttribute('aria-hidden', 'true');
+  s.append(dot);
+  t.append(s, el('span', 'tile-name', displayName(app)), el('span', 'tile-sub tone-text-' + tone, sub));
+  t.title = [displayName(app), app.summary, usageText(app)].filter(Boolean).join('\n');
+  return t;
+}
+
 function renderList() {
   const list = $('list'); list.replaceChildren();
   const shown = sortApps(filterApps(apps, category));
@@ -101,7 +117,8 @@ function renderList() {
     list.append(el('p', 'empty', apps.length ? `'${category}' 분류의 앱이 없습니다.` : '아직 등록된 앱이 없습니다. 앱이 배포되면 스스로 등록됩니다.'));
     return;
   }
-  for (const a of shown) list.append(card(a));
+  list.classList.toggle('grid3', viewMode === 'grid');
+  for (const a of shown) list.append(viewMode === 'grid' ? tile(a) : card(a));
 }
 
 function renderEdit() {
@@ -161,5 +178,17 @@ $('refreshBtn').addEventListener('click', async () => {
   await load();
 });
 
+function renderView() {
+  $('viewGrid').setAttribute('aria-pressed', String(viewMode === 'grid'));
+  $('viewList').setAttribute('aria-pressed', String(viewMode === 'list'));
+}
+for (const [id, mode] of [['viewGrid', 'grid'], ['viewList', 'list']]) {
+  $(id).addEventListener('click', () => {
+    viewMode = mode; try { localStorage.setItem('hub-view', mode); } catch { /* 기억 못 해도 이번 화면에서는 바뀐다 */ }
+    renderView(); renderList();
+  });
+}
+
 renderChips();
+renderView();
 load();
