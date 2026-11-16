@@ -1,7 +1,7 @@
 // 화면 규칙(web/js/view.js, DOM 없음). 실행: npm test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sortApps, filterApps, summarize, displayName, usageText, badges, linkFor, agoText } from '../web/js/view.js';
+import { sortApps, filterApps, summarize, displayName, usageText, badges, linkFor, agoText, tileInfo } from '../web/js/view.js';
 
 const NOW = Date.parse('2026-11-15T12:00:00Z');
 const day = n => new Date(NOW - n * 86400000).toISOString();
@@ -51,4 +51,13 @@ test('public: false면 링크를 숨긴다, https 주소만 링크', () => {
   assert.equal(linkFor(app({ public: false })), null);
   assert.equal(linkFor(app({ public: undefined })), 'https://a.t.workers.dev'); // 예전 앱(app.json 없음)
   assert.equal(linkFor(app({ url: 'javascript:alert(1)' })), null);
+});
+
+test('격자 칸: 문제가 있으면 그것을, 없으면 사용량을 한 줄로', () => {
+  assert.deepEqual(tileInfo(app(), NOW), { tone: 'ok', sub: '30일 3회' });
+  assert.deepEqual(tileInfo(app({ state: 'down', okAt: day(2.5), usage: null }), NOW), { tone: 'bad', sub: '응답 없음 3일' });
+  assert.deepEqual(tileInfo(app({ state: 'legacy', usage: null }), NOW), { tone: 'warn', sub: '허브 준비 전' });
+  assert.deepEqual(tileInfo(app({ usage: { last30d: 0, lastUsedAt: day(40) } }), NOW), { tone: 'muted', sub: '쉬는 중' });
+  assert.deepEqual(tileInfo(app({ hidden: true }), NOW), { tone: 'ok', sub: '30일 3회' }); // 숨김 표시는 칸 흐림으로만
+  assert.deepEqual(tileInfo(app({ usage: null, category: '돈' }), NOW), { tone: 'ok', sub: '돈' });
 });

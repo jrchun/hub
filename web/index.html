@@ -20,7 +20,13 @@
   <header class="head">
     <div class="head-row">
       <h1>앱 허브</h1>
-      <button type="button" id="editBtn" class="ghost">편집</button>
+      <div class="head-actions">
+        <div class="seg" role="group" aria-label="보기 방식">
+          <button type="button" id="viewGrid" aria-pressed="true">격자</button>
+          <button type="button" id="viewList" aria-pressed="false">목록</button>
+        </div>
+        <button type="button" id="editBtn" class="ghost">편집</button>
+      </div>
     </div>
     <p class="sub num" id="summary" aria-live="polite">불러오는 중</p>
   </header>
@@ -33,7 +39,7 @@
 
   <div class="edit-bar" id="editBar" hidden>
     <button type="button" id="refreshBtn" class="primary">지금 확인</button>
-    <span class="hint">매일 08:00에 자동으로 확인합니다</span>
+    <span class="hint">매일 08:00 자동 확인 · 숨기기·삭제는 목록 보기에서</span>
   </div>
 
   <nav class="chips" id="chips" aria-label="분류"></nav>
