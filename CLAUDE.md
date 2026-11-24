@@ -15,7 +15,7 @@ Cloudflare 연결은 MCP(브라우저 로그인)로 한다. **API 토큰을 만�
 
 허브 주소: https://hub.woongstudio.com
 - 이 저장소가 앱 허브 자신이다(만든 앱들을 모아 보여 주는 페이지). 허브는 자기 자신을 등록하지 않는다(`/api/register`가 거절한다). 예비 주소 `https://hub.tedcheon.workers.dev`도 같은 허브다.
-- 등록은 **같은 주인**의 앱만 받는다: 허브 주소의 도메인(`woongstudio.com`)과 `wrangler.toml` `[vars] OWNER_DOMAINS`에 적은 것(`woongstudio.com,tedcheon.workers.dev`). 주소를 옮긴 앱은 `{"url":"<새 주소>","replaces":"<옛 주소>"}`로 보내면 두 주소의 `app.json`이 같을 때 옛 줄을 새 주소로 옮긴다.
+- 등록은 **같은 주인**의 앱만 받는다: 허브 주소의 도메인(`woongstudio.com`)과 `wrangler.toml` `[vars] OWNER_DOMAINS`에 적은 것(`woongstudio.com,tedcheon.workers.dev`). 예외로 `OWNER_HOSTS`에 적은 정확한 주소 하나하나(`haenya.pages.dev`, 했냐를 옮기기 전까지)도 받는다. 주소를 옮긴 앱은 `{"url":"<새 주소>","replaces":"<옛 주소>"}`로 보내면 두 주소의 `app.json`이 같을 때 옛 줄을 새 주소로 옮긴다.
 
 ## 구성
 - 이 앱: **앱 허브**. app_starter로 만든 앱들을 카드로 모아 본다. 자세한 동작·API·함정은 `README.md`.

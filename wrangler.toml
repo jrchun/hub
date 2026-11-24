@@ -26,6 +26,9 @@ database_id = "433c78cf-350e-4748-bc5c-b3441810a116"
 # 예비 주소(hub.tedcheon.workers.dev)로 허브를 열었을 때도 같은 앱들을 받게 둘 다 적는다. src/lib/hub.js allowedOwners.
 [vars]
 OWNER_DOMAINS = "woongstudio.com,tedcheon.workers.dev"
+# 주인 비교와 상관없이 받을 정확한 앱 주소(쉼표로 구분). 했냐는 내 도메인으로 옮기기 전까지 pages.dev 주소라 여기에 둔다.
+# 옮긴 뒤 replaces로 허브 줄을 새 주소로 바꾸면 지워도 된다(312goal haenya/CLAUDE.md "앱 허브 연결").
+OWNER_HOSTS = "haenya.pages.dev"
 
 # 예약 작업(src/jobs.js): 등록된 앱 둘러보기. UTC 기준이라 23:00 UTC = 매일 08:00 KST.
 # 무료 플랜은 계정 전체에서 Cron Trigger 5개까지다.
