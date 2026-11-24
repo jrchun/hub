@@ -5,15 +5,20 @@
 // 예약 작업(매일 등)은 src/jobs.js. 시각은 wrangler.toml의 [triggers] crons.
 import * as apps from './api/apps.js';
 import * as health from './api/health.js';
+import * as login from './api/login.js';
+import * as logout from './api/logout.js';
 import * as password from './api/password.js';
 import * as refresh from './api/refresh.js';
 import * as register from './api/register.js';
+import * as session from './api/session.js';
 import { json } from './lib/http.js';
 import { runScheduled } from './jobs.js';
 
 const ROUTES = {
   '/api/apps': apps, '/api/health': health, '/api/password': password,
   '/api/refresh': refresh, '/api/register': register,
+  // 허브 로그인(한 번 로그인하면 woongstudio.com 아래 모든 앱에서 편집). src/lib/session.js
+  '/api/login': login, '/api/logout': logout, '/api/session': session,
 };
 
 export default {

@@ -38,3 +38,10 @@ CREATE TABLE IF NOT EXISTS usage_log (
   ts TEXT NOT NULL,
   event TEXT NOT NULL
 );
+
+-- 허브 로그인 실패 횟수(src/api/login.js). 같은 접속 위치(ip)에서 10분(since부터) 동안 10번 틀리면 잠시 막는다.
+CREATE TABLE IF NOT EXISTS login_attempts (
+  ip TEXT PRIMARY KEY,
+  count INTEGER NOT NULL,
+  since INTEGER NOT NULL
+);

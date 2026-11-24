@@ -21,7 +21,7 @@ Cloudflare 연결은 MCP(브라우저 로그인)로 한다. **API 토큰을 만�
 - 이 앱: **앱 허브**. app_starter로 만든 앱들을 카드로 모아 본다. 자세한 동작·API·함정은 `README.md`.
 - `web/app.json`·`web/og.png`·`/api/health`의 `starter`·`usage`: 허브 자신의 자기소개서·대표 화면·상태(`docs/HUB.md`).
 - `web/`: 정적 화면(빌드 없음). 규칙(정렬·배지·링크 숨김)은 `web/js/view.js`의 순수 함수, 그리기·이벤트는 `web/js/app.js`, 서버 통신은 `web/js/api.js`. 앱에서 받은 글자는 `textContent`로만 넣는다(innerHTML 금지).
-- `src/worker.js`: `/api/*`만 처리. 새 API는 `src/api/<이름>.js`에 `GET/PUT/POST/DELETE`를 만들고 `ROUTES`에 추가. 허브 API는 `register`(등록, 비밀값 없음·같은 주인만, `replaces`로 주소 옮기기)·`apps`(목록·숨기기·삭제)·`refresh`(지금 확인).
+- `src/worker.js`: `/api/*`만 처리. 새 API는 `src/api/<이름>.js`에 `GET/PUT/POST/DELETE`를 만들고 `ROUTES`에 추가. 허브 API는 `register`(등록, 비밀값 없음·같은 주인만, `replaces`로 주소 옮기기)·`apps`(목록·숨기기·삭제)·`refresh`(지금 확인)·`login`/`logout`/`session`(허브 로그인: 한 번 로그인하면 woongstudio.com 아래 앱 전부 편집, `src/lib/session.js`, README "허브 로그인").
 - `src/lib/hub.js`: 주소 정리·주인 비교(`ownerOf`: 내 도메인 또는 workers.dev 계정)·앱 확인(100KB 제한, 리다이렉트 안 따라감, 10초 제한)·판정·25개 선택(순수 함수). `src/lib/store.js`: D1 읽기·쓰기.
 - `src/jobs.js`: 매일 08:00 KST(`wrangler.toml` `[triggers] crons = ["0 23 * * *"]`, UTC) 등록된 앱 둘러보기. 무료 플랜은 계정 전체 Cron 5개, 한 번 실행에 바깥 요청 50개(앱당 2개 → 25개).
 - `wrangler.toml`: `compatibility_flags = ["global_fetch_strictly_public"]`를 지우지 않는다(같은 계정 workers.dev 앱을 못 부름, 오류 1042). 배포 절차와 함정은 `docs/SETUP.md`.
@@ -32,7 +32,7 @@ Cloudflare 연결은 MCP(브라우저 로그인)로 한다. **API 토큰을 만�
 ## 지켜야 할 것
 - 화면은 빌드 없는 정적 파일. React·번들러·CSS 프레임워크를 들이지 않는다. 외부 스크립트는 글꼴(Google Fonts)만.
 - 색은 `web/styles.css`의 CSS 변수만 쓴다. **라이트·다크와 폰 폭 400px을 매번 확인**한다(가로 스크롤 없음).
-- 읽기는 누구나, 쓰기는 편집 암호가 있어야 한다. 편집 암호는 사람이 사이트에서 처음 "편집"을 누를 때 화면에서 정한다(D1 `settings`에 해시로 저장, `src/api/password.js`). 대시보드 Secret `WRITE_TOKEN`이 있으면 그것이 우선. 암호 원문을 채팅·저장소에 두지 않는다.
+- 읽기는 누구나, 쓰기는 편집 암호가 있어야 한다. 편집 암호는 사람이 사이트에서 처음 "편집"을 누를 때 화면에서 정한다(D1 `settings`에 해시로 저장, `src/api/password.js`). 이 암호가 **허브 로그인 암호**이기도 하다(다른 앱 편집 권한까지 걸려 있으니 다른 곳에서 쓰지 않는 암호로). 대시보드 Secret `WRITE_TOKEN`이 있으면 그것이 우선. 암호 원문을 채팅·저장소에 두지 않는다.
 - 모르는 외부 API 사양은 추측하지 말고 공식 문서를 확인한다(Cloudflare 문서는 `https://developers.cloudflare.com/<경로>/index.md`로 마크다운을 받을 수 있다).
 - 계산·규칙은 DOM에 접근하지 않는 순수 함수로 두고 `tests/`에 테스트를 붙인다.
 - 큰 기능을 바꾸면 `web/app.json`의 `updatedAt`을 그날 날짜로 고친다(화면이 크게 바뀌면 `og.png`도 다시 찍는다). `app.json`은 누구나 볼 수 있고, `public: false`는 허브에서 링크만 숨기는 표시일 뿐 보안 장치가 아니다.

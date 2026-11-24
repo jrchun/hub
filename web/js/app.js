@@ -7,6 +7,10 @@ const $ = id => document.getElementById(id);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
 
 let apps = [], canEdit = false, category = '전체', firstTime = false;
+// 다른 앱에서 "허브에서 로그인"으로 넘어왔을 때(?login=1&return=<앱 주소>): 로그인 칸을 바로 열고, 로그인 뒤 그 앱으로 돌아간다.
+const params = new URLSearchParams(location.search);
+const returnTo = params.get('return') || '';
+const wantLogin = params.get('login') === '1';
 // 보기 방식: 'grid'(3×3 격자) | 'list'(큰 카드). 이 기기에 기억한다.
 let viewMode = (() => { try { return localStorage.getItem('hub-view') || 'grid'; } catch { return 'grid'; } })();
 const status = text => { $('status').textContent = text; };
@@ -139,10 +143,19 @@ async function load() {
 }
 
 $('editBtn').addEventListener('click', async () => {
-  if (canEdit) { // 잠그기: 이 기기에서 편집 암호를 잊는다
-    api.rememberToken(''); canEdit = false; $('tokenForm').hidden = true;
-    status('잠갔습니다. 다시 고치려면 편집 암호를 넣으세요.'); await load(); return;
+  if (canEdit) { // 잠그기 = 로그아웃(이 브라우저에서. 다른 앱도 같이 잠긴다)
+    await api.logout(); canEdit = false; $('tokenForm').hidden = true;
+    status('로그아웃했습니다. 다른 앱도 이 브라우저에서는 같이 잠깁니다.'); await load(); return;
   }
+  await openLogin();
+});
+
+$('logoutAll').addEventListener('click', async () => {
+  await api.logout(true); canEdit = false;
+  status('모든 기기·브라우저에서 로그아웃했습니다.'); await load();
+});
+
+async function openLogin(force) {
   const s = await api.getStatus().catch(() => ({}));
   firstTime = s.passwordSet === false;
   const min = s.passwordMinLength || 6;
@@ -150,9 +163,10 @@ $('editBtn').addEventListener('click', async () => {
   $('tokenIn').autocomplete = firstTime ? 'new-password' : 'current-password';
   $('tokenIn').minLength = firstTime ? min : 0;
   status(firstTime ? '아직 편집 암호가 없습니다. 앞으로 쓸 편집 암호를 정해 주세요. 다른 기기에서도 이 암호로 고칩니다.' : '');
-  $('tokenForm').hidden = !$('tokenForm').hidden;
+  if (!firstTime && returnTo) status('허브에 로그인하면 원래 앱으로 돌아가 바로 저장할 수 있습니다. 이 브라우저에서는 다른 앱도 다시 묻지 않습니다.');
+  $('tokenForm').hidden = force ? false : !$('tokenForm').hidden;
   if (!$('tokenForm').hidden) $('tokenIn').focus();
-});
+}
 
 $('tokenForm').addEventListener('submit', async e => {
   e.preventDefault();
@@ -162,10 +176,13 @@ $('tokenForm').addEventListener('submit', async e => {
     if (!r.ok && !r.taken) { status(r.detail); return; }
     if (r.taken) { firstTime = false; $('tokenLabel').textContent = '편집 암호'; status('편집 암호가 이미 정해져 있습니다. 그 암호를 입력해 주세요.'); return; }
   }
-  api.rememberToken(t);
-  const r = await load();
-  if (r && r.canEdit) { $('tokenForm').hidden = true; status(firstTime ? '편집 암호를 정했습니다. 이 기기에 기억됩니다.' : '편집할 수 있습니다.'); firstTime = false; }
-  else if (r) { api.rememberToken(''); status('편집 암호가 맞지 않습니다. 다시 입력해 주세요.'); }
+  const r = await api.login(t, returnTo).catch(() => ({ ok: false, detail: '서버에 연결하지 못했습니다.' }));
+  if (!r.ok) { status(r.status === 401 ? '편집 암호가 맞지 않습니다. 다시 입력해 주세요.' : r.detail); return; }
+  if (r.next) { status('로그인했습니다. 원래 앱으로 돌아갑니다…'); location.href = r.next; return; }
+  await load();
+  $('tokenForm').hidden = true;
+  status(firstTime ? '편집 암호를 정하고 로그인했습니다. woongstudio.com의 다른 앱에서도 바로 편집할 수 있습니다.' : '로그인했습니다. woongstudio.com의 다른 앱에서도 바로 편집할 수 있습니다.');
+  firstTime = false;
 });
 
 $('refreshBtn').addEventListener('click', async () => {
@@ -191,4 +208,4 @@ for (const [id, mode] of [['viewGrid', 'grid'], ['viewList', 'list']]) {
 
 renderChips();
 renderView();
-load();
+load().then(r => { if (wantLogin && r && !r.canEdit) openLogin(true); else if (wantLogin && r && r.canEdit && returnTo) status('이미 로그인돼 있습니다. 원래 앱으로 돌아가 저장하면 됩니다.'); });

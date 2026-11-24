@@ -1,4 +1,5 @@
 // Worker API 공용 도구.
+import { deriveKey, verifyToken, readCookie } from './session.js';
 
 export const json = (body, status = 200) => new Response(JSON.stringify(body), {
   status,
@@ -53,11 +54,48 @@ export async function passwordState(env) {
   return (await storedHash(env)) ? { set: true, source: 'site' } : { set: false, source: null };
 }
 
+// 암호 원문이 맞는가(대시보드 비밀값 우선, 없으면 사이트에서 정한 해시).
+export async function checkPassword(env, password) {
+  if (!password) return false;
+  if (env.WRITE_TOKEN) return safeEqual(password, env.WRITE_TOKEN);
+  return verifyPassword(password, await storedHash(env));
+}
+
+// 쓰기 허락: ① Authorization: Bearer <편집 암호>(예전 방식·스크립트용) ② 허브 로그인 표시(쿠키 hub_session).
 export async function canWrite(request, env) {
-  const got = bearer(request);
-  if (!got) return false;
-  if (env.WRITE_TOKEN) return safeEqual(got, env.WRITE_TOKEN);
-  return verifyPassword(got, await storedHash(env));
+  if (await checkPassword(env, bearer(request))) return true;
+  const token = readCookie(request);
+  return token ? (await checkSession(env, token)).ok : false;
+}
+
+// ── 허브 로그인 표시(src/lib/session.js) ──────────────────────
+const SESSION_SECRET_KEY = 'session_secret';
+
+// 지금 편집 암호를 나타내는 글자(원문 아님). 암호가 바뀌면 달라져서 예전 로그인 표시가 모두 무효가 된다.
+async function passwordFingerprint(env) {
+  if (env.WRITE_TOKEN) return 'secret:' + await sha256hex(env.WRITE_TOKEN);
+  const h = await storedHash(env);
+  return h ? 'site:' + h : null;
+}
+
+// 서명 열쇠. 편집 암호가 아직 없으면 null(로그인할 수 없다).
+export async function sessionKey(env) {
+  const fp = await passwordFingerprint(env);
+  if (!fp || !env.DB) return null;
+  const fresh = [...crypto.getRandomValues(new Uint8Array(32))].map(b => b.toString(16).padStart(2, '0')).join('');
+  await env.DB.prepare('INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)').bind(SESSION_SECRET_KEY, fresh).run();
+  const row = await env.DB.prepare('SELECT value FROM settings WHERE key = ?').bind(SESSION_SECRET_KEY).first();
+  return row ? deriveKey(row.value, fp) : null;
+}
+
+export async function checkSession(env, token) {
+  const key = await sessionKey(env).catch(() => null);
+  return key ? verifyToken(key, token) : { ok: false };
+}
+
+// 모든 기기에서 로그아웃: 무작위 값을 지우면 다음에 새로 만들어져 예전 표시가 모두 무효가 된다.
+export async function rotateSessionSecret(env) {
+  await env.DB.prepare('DELETE FROM settings WHERE key = ?').bind(SESSION_SECRET_KEY).run();
 }
 
 // 처음 한 번만 성공한다. 이미 정해졌으면 false.
