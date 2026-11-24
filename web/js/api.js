@@ -47,3 +47,21 @@ export async function claimPassword(password) {
   const j = await res.json().catch(() => ({}));
   return { ok: false, detail: j.detail || 'HTTP ' + res.status };
 }
+
+// 허브 로그인. 성공하면 서버가 woongstudio.com 전체에 로그인 쿠키를 둔다(다른 앱에서도 편집 가능).
+// → { ok: true, next? } / { ok: false, status, detail }. next: 로그인 뒤 돌아갈 앱 주소(서버가 안전하다고 본 것만)
+export async function login(password, returnTo) {
+  const res = await fetch('/api/login', {
+    method: 'POST', cache: 'no-store',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ password, return: returnTo || undefined }),
+  });
+  const j = await res.json().catch(() => ({}));
+  return res.ok ? { ok: true, next: j.next } : { ok: false, status: res.status, detail: j.detail || 'HTTP ' + res.status };
+}
+
+// 로그아웃. all: 모든 기기·브라우저에서.
+export async function logout(all = false) {
+  rememberToken(''); // 예전 방식으로 이 기기에 기억한 암호도 지운다
+  await fetch('/api/logout', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ all }) }).catch(() => {});
+}

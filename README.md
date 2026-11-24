@@ -26,6 +26,9 @@ app_starter로 만든 내 앱들을 폰 한 화면에서 카드로 모아 보는
 | `PUT /api/apps {"url", "hidden"}` | 숨기기/보이기 | 필요 |
 | `DELETE /api/apps?url=<주소>` | 삭제 | 필요 |
 | `POST /api/refresh` | 지금 확인(매일 예약 작업과 같은 동작) | 필요 |
+| `POST /api/login {"password", "return"?}` | 허브 로그인. 쿠키 `hub_session`을 `SESSION_DOMAIN`(woongstudio.com) 전체에 둔다(90일). 같은 접속 위치에서 10분에 10번 틀리면 429. `return`이 같은 주인 주소면 `next`로 돌려준다 | 암호 |
+| `POST /api/logout {"all"?}` | 로그아웃(쿠키 삭제). `all: true`면 모든 기기의 로그인 표시 무효 | `all`은 필요 |
+| `POST /api/session {"token"}` / `GET /api/session` | 로그인 표시 확인(다른 앱의 서버가 부름) / 내 로그인 상태(쿠키) | 필요 없음 |
 
 ## 지켜야 할 것 (함정)
 
@@ -54,3 +57,10 @@ npm run check -- https://hub.woongstudio.com              # 배포 검사
 ```
 
 이 저장소는 [app_starter](https://github.com/jrchun/app_starter) 틀로 만들었습니다. 작업 규칙은 [`CLAUDE.md`](CLAUDE.md), 배포 절차는 [`docs/AGENT_SETUP.md`](docs/AGENT_SETUP.md)·[`docs/SETUP.md`](docs/SETUP.md).
+
+## 허브 로그인 (내 앱 전부 한 번에)
+
+- 허브에서 "편집" → 편집 암호를 넣으면 로그인된다. 이 브라우저에서는 `woongstudio.com` 아래 다른 앱(허브 로그인이 켜진 app_starter 앱)도 다시 묻지 않고 저장된다. "잠그기" = 이 브라우저 로그아웃, "모든 기기에서 로그아웃" = 어디서든 무효.
+- 다른 앱에서 "허브에서 로그인 →"을 누르면 `/?login=1&return=<앱 주소>`로 와서, 로그인 뒤 그 앱으로 돌아간다(같은 주인 주소만).
+- 로그인 표시는 허브만 아는 열쇠로 서명한다(`src/lib/session.js`, D1 `settings.session_secret`). 편집 암호를 바꾸거나 초기화하면(`write_hash` 행 삭제) 모든 표시가 무효가 된다.
+- 앱 쪽 동작·함정은 app_starter `docs/HUB.md` "허브 로그인".
