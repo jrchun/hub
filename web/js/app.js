@@ -208,4 +208,12 @@ for (const [id, mode] of [['viewGrid', 'grid'], ['viewList', 'list']]) {
 
 renderChips();
 renderView();
-load().then(r => { if (wantLogin && r && !r.canEdit) openLogin(true); else if (wantLogin && r && r.canEdit && returnTo) status('이미 로그인돼 있습니다. 원래 앱으로 돌아가 저장하면 됩니다.'); });
+// 예전 방식(이 기기에 암호를 기억)으로 편집하던 브라우저는 한 번 허브 로그인으로 바꿔 준다(쿠키가 생겨야 다른 앱도 편집된다).
+async function upgradeLegacy() {
+  const legacy = api.getToken();
+  if (!legacy) return;
+  const r = await api.login(legacy).catch(() => ({ ok: false }));
+  api.rememberToken('');
+  if (r.ok) status('허브 로그인으로 바꿨습니다. 이 브라우저에서는 woongstudio.com의 다른 앱도 바로 편집할 수 있습니다.');
+}
+upgradeLegacy().then(load).then(r => { if (wantLogin && r && !r.canEdit) openLogin(true); else if (wantLogin && r && r.canEdit && returnTo) status('이미 로그인돼 있습니다. 원래 앱으로 돌아가 저장하면 됩니다.'); });
