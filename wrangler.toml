@@ -5,6 +5,8 @@
 name = "hub"
 main = "./src/worker.js"
 compatibility_date = "2026-11-01"
+# 옛 workers.dev 주소도 계속 연다. routes를 넣으면 Cloudflare가 workers.dev를 끄기 때문에 꼭 적어 둔다.
+workers_dev = true
 # 같은 계정의 다른 workers.dev 앱을 fetch로 불러오려면 꼭 필요하다. 없으면 Cloudflare가 막는다(오류 1042,
 # developers.cloudflare.com/workers/observability/errors). 허브가 앱의 app.json·health를 읽는 데 쓴다.
 compatibility_flags = ["global_fetch_strictly_public"]
@@ -20,7 +22,18 @@ binding = "DB"
 database_name = "hub"
 database_id = "433c78cf-350e-4748-bc5c-b3441810a116"
 
+# 허브가 등록받는 "주인"(쉼표로 구분). 허브 주소의 도메인은 자동으로 들어간다. 옛 workers.dev 주소의 앱과,
+# 예비 주소(hub.tedcheon.workers.dev)로 허브를 열었을 때도 같은 앱들을 받게 둘 다 적는다. src/lib/hub.js allowedOwners.
+[vars]
+OWNER_DOMAINS = "woongstudio.com,tedcheon.workers.dev"
+
 # 예약 작업(src/jobs.js): 등록된 앱 둘러보기. UTC 기준이라 23:00 UTC = 매일 08:00 KST.
 # 무료 플랜은 계정 전체에서 Cron Trigger 5개까지다.
 [triggers]
 crons = ["0 23 * * *"]
+
+# >>> 내 도메인 주소 (scripts/cf_mcp.mjs fill이 관리한다. 손으로 고치지 않는다)
+[[routes]]
+pattern = "hub.woongstudio.com"
+custom_domain = true
+# <<< 내 도메인 주소

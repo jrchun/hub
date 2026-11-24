@@ -3,7 +3,7 @@
 -- 등록된 앱. 앱에서 받은 원문(app.json, /api/health)은 그대로 저장하고, 화면에 쓸 값은 읽을 때 꺼낸다(src/lib/hub.js).
 -- 앱 쪽 형식이 바뀌어도 저장은 깨지지 않게 하려는 것이다.
 CREATE TABLE IF NOT EXISTS apps (
-  url TEXT PRIMARY KEY,             -- https://<앱>.<계정>.workers.dev (경로 없음, 소문자)
+  url TEXT PRIMARY KEY,             -- https://<앱>.woongstudio.com 또는 https://<앱>.<계정>.workers.dev (경로 없음, 소문자)
   meta TEXT,                        -- app.json 원문(JSON 글자). 없으면 NULL(허브 준비 전 예전 앱)
   health TEXT,                      -- /api/health 원문(JSON 글자)
   state TEXT NOT NULL DEFAULT 'down', -- ok(정상) | down(응답 없음) | legacy(허브 준비 전)

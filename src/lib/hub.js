@@ -43,16 +43,49 @@ export function accountOf(host) {
   return labels.slice(1).join('.');
 }
 
-// 등록 요청을 받아도 되는가. hubHost: 허브 자신의 호스트(요청 주소에서 꺼냄). 설정값을 따로 두지 않는다.
+// 여러 사람이 함께 쓰는 주소(누구나 그 아래에 앱을 만들 수 있다). 이것을 "주인"으로 보면 남의 앱도 통과하므로 막는다.
+const SHARED_SUFFIXES = ['workers.dev', 'pages.dev', 'github.io', 'vercel.app', 'netlify.app', 'web.app', 'firebaseapp.com'];
+
+// 주소의 "주인" 표시. 같은 주인의 앱만 허브에 등록할 수 있다.
+//   <앱>.<계정>.workers.dev → <계정>.workers.dev (계정마다 하나)
+//   <앱>.<내 도메인>        → <내 도메인>        (예: gym-log.woongstudio.com → woongstudio.com. 그 아래 주소는 도메인 주인만 만든다)
+// 앱 주소 모양이 아니면(도메인 자체, 함께 쓰는 주소, 이상한 모양) null.
+export function ownerOf(host) {
+  const h = String(host || '').toLowerCase().replace(/:\d+$/, '').replace(/\.$/, '');
+  if (h.endsWith(WORKERS_DEV)) return accountOf(h);
+  const labels = h.split('.');
+  if (labels.length < 3 || !labels.every(l => LABEL_RE.test(l)) || /^\d+$/.test(labels.at(-1))) return null;
+  const owner = labels.slice(1).join('.');
+  return SHARED_SUFFIXES.includes(owner) ? null : owner;
+}
+
+// 이 허브가 받는 주인들: 허브 자신의 주인 + 설정(OWNER_DOMAINS, 쉼표로 구분. 예: "woongstudio.com,tedcheon.workers.dev").
+// 설정은 workers.dev 주소와 내 도메인 주소 중 어느 쪽으로 허브를 열어도 같은 앱들을 받게 하려는 것이다.
+export function allowedOwners(hubHost, extra = '') {
+  const out = new Set();
+  const own = ownerOf(hubHost);
+  if (own) out.add(own);
+  for (const raw of String(extra || '').split(',')) {
+    const d = raw.trim().toLowerCase();
+    if (!d || SHARED_SUFFIXES.includes(d)) continue;
+    // "woongstudio.com" 또는 "tedcheon.workers.dev" 모양만 받는다(ownerOf가 돌려줄 수 있는 값).
+    if (ownerOf('x.' + d) === d) out.add(d);
+  }
+  return out;
+}
+
+// 등록 요청을 받아도 되는가. hubHost: 허브 자신의 호스트(요청 주소에서 꺼냄). extraOwners: env.OWNER_DOMAINS.
 // → { ok: true, url } | { ok: false, status, detail }
-export function checkRegisterTarget(input, hubHost) {
+export function checkRegisterTarget(input, hubHost, extraOwners = '') {
   const url = normalizeUrl(input);
-  if (!url) return { ok: false, status: 400, detail: '주소 형식이 이상합니다. 예: https://my-app.<계정>.workers.dev' };
+  if (!url) return { ok: false, status: 400, detail: '주소 형식이 이상합니다. 예: https://my-app.woongstudio.com' };
   const host = url.slice('https://'.length);
-  const hubAccount = accountOf(hubHost);
-  if (!hubAccount) return { ok: false, status: 403, detail: '허브 주소가 workers.dev가 아니라 계정을 비교할 수 없습니다.' };
-  if (accountOf(host) !== hubAccount) return { ok: false, status: 403, detail: '허브와 같은 계정의 앱만 등록할 수 있습니다.' };
-  if (host === String(hubHost).toLowerCase().replace(/:\d+$/, '')) return { ok: false, status: 400, detail: '허브 자신은 등록하지 않습니다.' };
+  const owners = allowedOwners(hubHost, extraOwners);
+  if (!owners.size) return { ok: false, status: 403, detail: '허브 주소에서 주인(도메인·계정)을 알 수 없어 비교할 수 없습니다.' };
+  if (!owners.has(ownerOf(host))) return { ok: false, status: 403, detail: `허브와 같은 주인의 앱만 등록할 수 있습니다(${[...owners].join(', ')} 아래 주소).` };
+  // 허브 자신: 같은 주소이거나, 받는 주인 아래에서 앞 이름이 같은 주소(hub.woongstudio.com ↔ hub.tedcheon.workers.dev).
+  const hubClean = String(hubHost).toLowerCase().replace(/:\d+$/, '');
+  if (host === hubClean || host.split('.')[0] === hubClean.split('.')[0]) return { ok: false, status: 400, detail: '허브 자신은 등록하지 않습니다.' };
   return { ok: true, url };
 }
 
