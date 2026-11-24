@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../src/worker.js';
 import {
-  normalizeUrl, accountOf, checkRegisterTarget, judge, checkApp, pickForCheck, checkMany, nextRow, toView, readLimited,
+  normalizeUrl, accountOf, ownerOf, allowedOwners, checkRegisterTarget, judge, checkApp, pickForCheck, checkMany, nextRow, toView, readLimited,
   fetchJson, MAX_CHECKS_PER_RUN,
 } from '../src/lib/hub.js';
 import { checkDue } from '../src/lib/store.js';
@@ -68,6 +68,37 @@ test('등록 대상: 같은 계정만 받고, 다른 계정은 403, 허브 자�
   assert.equal(checkRegisterTarget('nope', HUB).status, 400);
   // 허브가 workers.dev가 아니면(예: 내 컴퓨터) 아무것도 받지 않는다
   assert.equal(checkRegisterTarget('https://a.tedcheon.workers.dev', 'localhost:8787').status, 403);
+});
+
+test('주인 꺼내기: 내 도메인 아래 주소와 workers.dev 계정, 함께 쓰는 주소는 아님', () => {
+  assert.equal(ownerOf('gym-log.woongstudio.com'), 'woongstudio.com');
+  assert.equal(ownerOf('Hub.WoongStudio.com:443'), 'woongstudio.com');
+  assert.equal(ownerOf('a.my-site.co.kr'), 'my-site.co.kr');
+  assert.equal(ownerOf(HUB), 'tedcheon.workers.dev');
+  assert.equal(ownerOf('woongstudio.com'), null);       // 도메인 자체는 앱 주소가 아니다
+  assert.equal(ownerOf('haenya.pages.dev'), null);      // 누구나 만드는 주소
+  assert.equal(ownerOf('me.github.io'), null);
+  assert.equal(ownerOf('a.b.tedcheon.workers.dev'), null);
+  assert.equal(ownerOf('localhost:8787'), null);
+  assert.equal(ownerOf('1.2.3.4'), null);
+  assert.deepEqual([...allowedOwners('hub.woongstudio.com', 'tedcheon.workers.dev, woongstudio.com')], ['woongstudio.com', 'tedcheon.workers.dev']);
+  assert.deepEqual([...allowedOwners(HUB, 'woongstudio.com')], ['tedcheon.workers.dev', 'woongstudio.com']);
+  assert.deepEqual([...allowedOwners('localhost:8787', 'workers.dev,pages.dev,nodot,woongstudio.com')], ['woongstudio.com']); // 함께 쓰는 주소·이상한 값은 버림
+});
+
+test('등록 대상: 내 도메인으로 연 허브는 같은 도메인 앱 + OWNER_DOMAINS를 받는다', () => {
+  const H = 'hub.woongstudio.com', O = 'woongstudio.com,tedcheon.workers.dev';
+  assert.deepEqual(checkRegisterTarget('https://rebalance.woongstudio.com/', H), { ok: true, url: 'https://rebalance.woongstudio.com' });
+  assert.equal(checkRegisterTarget('https://rebalance.tedcheon.workers.dev', H).status, 403);     // 설정 없으면 옛 주소는 안 받음
+  assert.equal(checkRegisterTarget('https://rebalance.tedcheon.workers.dev', H, O).ok, true);     // 설정하면 받음
+  assert.equal(checkRegisterTarget('https://rebalance.woongstudio.com', HUB, O).ok, true);        // workers.dev로 열어도 같음
+  assert.equal(checkRegisterTarget('https://evil.com', H, O).status, 403);
+  assert.equal(checkRegisterTarget('https://x.woongstudio.com.evil.com', H, O).status, 403);
+  assert.equal(checkRegisterTarget('https://a.b.woongstudio.com', H, O).status, 403);
+  assert.equal(checkRegisterTarget('https://haenya.pages.dev', H, O).status, 403);
+  assert.equal(checkRegisterTarget('https://woongstudio.com', H, O).status, 403);
+  assert.equal(checkRegisterTarget('https://hub.woongstudio.com', H, O).status, 400);             // 허브 자신
+  assert.equal(checkRegisterTarget('https://hub.tedcheon.workers.dev', H, O).status, 400);        // 허브의 옛 주소도 자신
 });
 
 // ── 판정 ──────────────────────────────────────────────────────
@@ -199,6 +230,36 @@ test('등록: 다른 계정은 403, 이상한 주소는 400 — 어느 경우에
   assert.equal(bad.status, 400);
   assert.equal(net.calls.length, 0);
   assert.equal(env.DB.raw.prepare('SELECT COUNT(*) AS n FROM apps').get().n, 0);
+});
+
+
+test('등록 옮기기(replaces): 두 주소의 app.json이 같으면 옛 줄을 새 주소로 옮기고 숨김·등록일을 이어받는다', async () => {
+  const env = { ...env0(), OWNER_DOMAINS: 'woongstudio.com' };
+  const oldU = 'https://gym.tedcheon.workers.dev', newU = 'https://gym.woongstudio.com';
+  await reg(env, oldU, fakeNet(modernApp(oldU)));
+  env.DB.raw.exec(`UPDATE apps SET hidden = 1, registered_at = '2026-11-01T00:00:00Z'`);
+  const r = await register.POST({ request: new Request(`https://${HUB}/api/register`, { method: 'POST', body: JSON.stringify({ url: newU, replaces: oldU + '/' }) }), env },
+    fakeNet({ ...modernApp(oldU), ...modernApp(newU) }));
+  const j = await r.json();
+  assert.deepEqual([r.status, j.replaced, j.replacedFrom, j.app.url], [201, true, oldU, newU]);
+  const rows = env.DB.raw.prepare('SELECT url, hidden, registered_at FROM apps').all().map(r => ({ ...r }));
+  assert.deepEqual(rows, [{ url: newU, hidden: 1, registered_at: '2026-11-01T00:00:00Z' }]);
+});
+
+test('등록 옮기기(replaces): app.json이 다르거나 옛 줄이 없으면 옛 줄을 건드리지 않는다', async () => {
+  const env = { ...env0(), OWNER_DOMAINS: 'woongstudio.com' };
+  const oldU = 'https://gym.tedcheon.workers.dev', newU = 'https://other.woongstudio.com';
+  await reg(env, oldU, fakeNet(modernApp(oldU)));
+  const other = { [newU + '/app.json']: { ...META, name: '다른 앱' }, [newU + '/api/health']: NEW_HEALTH };
+  const req = (url, replaces) => new Request(`https://${HUB}/api/register`, { method: 'POST', body: JSON.stringify({ url, replaces }) });
+  const j = await (await register.POST({ request: req(newU, oldU), env }, fakeNet({ ...modernApp(oldU), ...other }))).json();
+  assert.equal(j.replaced, false);
+  assert.match(j.replaceNote, /달라/);
+  assert.equal(env.DB.raw.prepare('SELECT COUNT(*) AS n FROM apps').get().n, 2);
+  const none = await (await register.POST({ request: req('https://x.woongstudio.com', 'https://nope.tedcheon.workers.dev'), env }, fakeNet(modernApp('https://x.woongstudio.com')))).json();
+  assert.deepEqual([none.replaced, /없습니다/.test(none.replaceNote)], [false, true]);
+  // 옛 주소가 다른 주인이면 아무것도 하지 않고 403
+  assert.equal((await register.POST({ request: req('https://y.woongstudio.com', 'https://a.other.workers.dev'), env }, fakeNet({}))).status, 403);
 });
 
 test('등록: 응답 없는 앱도 등록은 되고 "응답 없음"', async () => {

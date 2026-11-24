@@ -10,19 +10,23 @@
 **새 앱을 만들거나 배포하라는 요청이면 먼저 `docs/AGENT_SETUP.md`를 읽고 그 순서를 따른다.** (Codex 등은 `AGENTS.md`)
 Cloudflare 연결은 MCP(브라우저 로그인)로 한다. **API 토큰을 만들게 하지 않는다.** 앱마다 사용자 계정의 GitHub 저장소가 있고, `main`에 올리면 Cloudflare가 자동 배포한다.
 
-허브 주소: https://hub.tedcheon.workers.dev
-- 이 저장소가 앱 허브 자신이다(만든 앱들을 모아 보여 주는 페이지). 허브는 자기 자신을 등록하지 않는다(`/api/register`가 거절한다).
+내 도메인: woongstudio.com
+- 앱 주소는 `https://<앱이름>.<내 도메인>`. 이 줄 한 곳에만 둔다. `cf_mcp.mjs fill`이 읽어 `wrangler.toml`에 넣는다(Cloudflare가 DNS·인증서 자동). 옛 `workers.dev` 주소도 예비로 계속 열린다(`workers_dev = true`). 자세한 것은 app_starter `docs/DOMAIN.md`.
+
+허브 주소: https://hub.woongstudio.com
+- 이 저장소가 앱 허브 자신이다(만든 앱들을 모아 보여 주는 페이지). 허브는 자기 자신을 등록하지 않는다(`/api/register`가 거절한다). 예비 주소 `https://hub.tedcheon.workers.dev`도 같은 허브다.
+- 등록은 **같은 주인**의 앱만 받는다: 허브 주소의 도메인(`woongstudio.com`)과 `wrangler.toml` `[vars] OWNER_DOMAINS`에 적은 것(`woongstudio.com,tedcheon.workers.dev`). 주소를 옮긴 앱은 `{"url":"<새 주소>","replaces":"<옛 주소>"}`로 보내면 두 주소의 `app.json`이 같을 때 옛 줄을 새 주소로 옮긴다.
 
 ## 구성
 - 이 앱: **앱 허브**. app_starter로 만든 앱들을 카드로 모아 본다. 자세한 동작·API·함정은 `README.md`.
 - `web/app.json`·`web/og.png`·`/api/health`의 `starter`·`usage`: 허브 자신의 자기소개서·대표 화면·상태(`docs/HUB.md`).
 - `web/`: 정적 화면(빌드 없음). 규칙(정렬·배지·링크 숨김)은 `web/js/view.js`의 순수 함수, 그리기·이벤트는 `web/js/app.js`, 서버 통신은 `web/js/api.js`. 앱에서 받은 글자는 `textContent`로만 넣는다(innerHTML 금지).
-- `src/worker.js`: `/api/*`만 처리. 새 API는 `src/api/<이름>.js`에 `GET/PUT/POST/DELETE`를 만들고 `ROUTES`에 추가. 허브 API는 `register`(등록, 비밀값 없음·같은 계정만)·`apps`(목록·숨기기·삭제)·`refresh`(지금 확인).
-- `src/lib/hub.js`: 주소 정리·계정 비교·앱 확인(100KB 제한, 리다이렉트 안 따라감, 10초 제한)·판정·25개 선택(순수 함수). `src/lib/store.js`: D1 읽기·쓰기.
+- `src/worker.js`: `/api/*`만 처리. 새 API는 `src/api/<이름>.js`에 `GET/PUT/POST/DELETE`를 만들고 `ROUTES`에 추가. 허브 API는 `register`(등록, 비밀값 없음·같은 주인만, `replaces`로 주소 옮기기)·`apps`(목록·숨기기·삭제)·`refresh`(지금 확인).
+- `src/lib/hub.js`: 주소 정리·주인 비교(`ownerOf`: 내 도메인 또는 workers.dev 계정)·앱 확인(100KB 제한, 리다이렉트 안 따라감, 10초 제한)·판정·25개 선택(순수 함수). `src/lib/store.js`: D1 읽기·쓰기.
 - `src/jobs.js`: 매일 08:00 KST(`wrangler.toml` `[triggers] crons = ["0 23 * * *"]`, UTC) 등록된 앱 둘러보기. 무료 플랜은 계정 전체 Cron 5개, 한 번 실행에 바깥 요청 50개(앱당 2개 → 25개).
 - `wrangler.toml`: `compatibility_flags = ["global_fetch_strictly_public"]`를 지우지 않는다(같은 계정 workers.dev 앱을 못 부름, 오류 1042). 배포 절차와 함정은 `docs/SETUP.md`.
 - `db/schema.sql`: D1 스키마(`CREATE TABLE IF NOT EXISTS`만). 바꾸면 `node scripts/cf_mcp.mjs prepare`로 만든 코드를 Cloudflare MCP `execute`로 실행해 적용.
-- `scripts/cf_mcp.mjs`: Cloudflare MCP `execute`에 넘길 코드를 만든다(`address`·`prepare`·`fill`·`connect`·`status`, 예비 `deploy`). 실제로 Cloudflare에서 도는 코드는 `scripts/cf_mcp/remote.js`.
+- `scripts/cf_mcp.mjs`: Cloudflare MCP `execute`에 넘길 코드를 만든다(`address`·`prepare`·`fill`·`connect`·`domain`·`status`, 예비 `deploy`). 실제로 Cloudflare에서 도는 코드는 `scripts/cf_mcp/remote.js`.
 - 허브는 D1 모드 전용이다(틀의 Supabase 모드와 메모 예제는 지웠다).
 
 ## 지켜야 할 것
@@ -42,5 +46,5 @@ Cloudflare 연결은 MCP(브라우저 로그인)로 한다. **API 토큰을 만�
 ## 실행
 - 로컬: `cp .dev.vars.example .dev.vars && npx wrangler@4 d1 execute <이름> --local --file db/schema.sql && npx wrangler@4 dev` (예약 작업 시험: `--test-scheduled` 후 `/__scheduled`)
 - 테스트: `npm test`
-- 배포 확인: `npm run check -- https://<이름>.<계정>.workers.dev`
+- 배포 확인: `npm run check -- https://hub.woongstudio.com` (예비 `https://hub.tedcheon.workers.dev`)
 - Cloudflare 준비·연결: `node scripts/cf_mcp.mjs prepare --name <저장소 이름>` → 생긴 `.wrangler/mcp/prepare.js`를 MCP `execute`로 → `fill` → PR Merge → `connect`(GitHub 번호는 `gh api -X GET search/repositories`)
