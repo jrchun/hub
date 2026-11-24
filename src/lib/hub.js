@@ -74,13 +74,20 @@ export function allowedOwners(hubHost, extra = '') {
   return out;
 }
 
-// 등록 요청을 받아도 되는가. hubHost: 허브 자신의 호스트(요청 주소에서 꺼냄). extraOwners: env.OWNER_DOMAINS.
-// → { ok: true, url } | { ok: false, status, detail }
-export function checkRegisterTarget(input, hubHost, extraOwners = '') {
+// 주인 비교와 상관없이 받을 앱 주소(쉼표로 구분, 정확히 같은 호스트만). 예: 아직 내 도메인으로 옮기지 않은
+// Pages 앱 "haenya.pages.dev". pages.dev 전체가 아니라 그 주소 하나만 받는다.
+export function allowedHosts(extra = '') {
+  return new Set(String(extra || '').split(',').map(h => h.trim().toLowerCase()).filter(h => normalizeUrl('https://' + h) === 'https://' + h));
+}
+
+// 등록 요청을 받아도 되는가. hubHost: 허브 자신의 호스트(요청 주소에서 꺼냄).
+// extraOwners: env.OWNER_DOMAINS, extraHosts: env.OWNER_HOSTS. → { ok: true, url } | { ok: false, status, detail }
+export function checkRegisterTarget(input, hubHost, extraOwners = '', extraHosts = '') {
   const url = normalizeUrl(input);
   if (!url) return { ok: false, status: 400, detail: '주소 형식이 이상합니다. 예: https://my-app.woongstudio.com' };
   const host = url.slice('https://'.length);
   const owners = allowedOwners(hubHost, extraOwners);
+  if (allowedHosts(extraHosts).has(host)) return { ok: true, url };
   if (!owners.size) return { ok: false, status: 403, detail: '허브 주소에서 주인(도메인·계정)을 알 수 없어 비교할 수 없습니다.' };
   if (!owners.has(ownerOf(host))) return { ok: false, status: 403, detail: `허브와 같은 주인의 앱만 등록할 수 있습니다(${[...owners].join(', ')} 아래 주소).` };
   // 허브 자신: 같은 주소이거나, 받는 주인 아래에서 앞 이름이 같은 주소(hub.woongstudio.com ↔ hub.tedcheon.workers.dev).

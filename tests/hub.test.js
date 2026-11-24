@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import worker from '../src/worker.js';
 import {
-  normalizeUrl, accountOf, ownerOf, allowedOwners, checkRegisterTarget, judge, checkApp, pickForCheck, checkMany, nextRow, toView, readLimited,
+  normalizeUrl, accountOf, ownerOf, allowedOwners, allowedHosts, checkRegisterTarget, judge, checkApp, pickForCheck, checkMany, nextRow, toView, readLimited,
   fetchJson, MAX_CHECKS_PER_RUN,
 } from '../src/lib/hub.js';
 import { checkDue } from '../src/lib/store.js';
@@ -99,6 +99,15 @@ test('등록 대상: 내 도메인으로 연 허브는 같은 도메인 앱 + OW
   assert.equal(checkRegisterTarget('https://woongstudio.com', H, O).status, 403);
   assert.equal(checkRegisterTarget('https://hub.woongstudio.com', H, O).status, 400);             // 허브 자신
   assert.equal(checkRegisterTarget('https://hub.tedcheon.workers.dev', H, O).status, 400);        // 허브의 옛 주소도 자신
+});
+
+test('등록 대상: OWNER_HOSTS에 적은 정확한 주소만 예외로 받는다(pages.dev 전체는 아님)', () => {
+  const H = 'hub.woongstudio.com', O = 'woongstudio.com,tedcheon.workers.dev', X = 'haenya.pages.dev';
+  assert.deepEqual(checkRegisterTarget('https://haenya.pages.dev/home', H, O, X), { ok: true, url: 'https://haenya.pages.dev' });
+  assert.equal(checkRegisterTarget('https://evil.pages.dev', H, O, X).status, 403);
+  assert.equal(checkRegisterTarget('https://abc.haenya.pages.dev', H, O, X).status, 403);
+  assert.equal(checkRegisterTarget('https://haenya.pages.dev', H, O, '').status, 403);
+  assert.deepEqual([...allowedHosts(' Haenya.pages.dev , nope, a:b ,1.2.3.4')], ['haenya.pages.dev']);
 });
 
 // ── 판정 ──────────────────────────────────────────────────────
