@@ -132,7 +132,7 @@ function renderList() {
   for (const a of shown) list.append(viewMode === 'grid' ? tile(a) : card(a));
 }
 
-// 방문자: 카드만 보이고 관리 버튼은 없다. 주인은 제목 "앱 허브"를 눌러 로그인한다(다른 앱에서 넘어오면 바로 로그인 창).
+// 방문자: 카드만 보이고 관리 버튼은 없다. 주인은 제목 "웅스튜디오"를 눌러 로그인한다(다른 앱에서 넘어오면 바로 로그인 창).
 function renderEdit() {
   $('editBar').hidden = !canEdit;
   $('editBtn').hidden = !canEdit;

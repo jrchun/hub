@@ -1,8 +1,8 @@
 {
   "schema": 1,
-  "name": "앱 허브",
+  "name": "웅스튜디오",
   "emoji": "🗂️",
-  "summary": "내가 만든 앱들을 한 화면에서 보는 곳",
+  "summary": "웅스튜디오에서 만든 앱 모음",
   "category": "업무",
   "status": "운영중",
   "public": true,

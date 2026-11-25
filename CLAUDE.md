@@ -20,7 +20,7 @@ Cloudflare 연결은 MCP(브라우저 로그인)로 한다. **API 토큰을 만�
 ## 구성
 - 이 앱: **앱 허브**. app_starter로 만든 앱들을 카드로 모아 본다. 자세한 동작·API·함정은 `README.md`.
 - `web/app.json`·`web/og.png`·`/api/health`의 `starter`·`usage`: 허브 자신의 자기소개서·대표 화면·상태(`docs/HUB.md`).
-- 화면은 하나지만 **방문자는 카드만**(이름·그림·설명·분류, 서버도 `publicView` 값만 보냄), **주인(허브 로그인)은 상태·사용량·관리 기능까지**. 로그인 입구는 제목 "앱 허브"(누르면 암호 창). 보기 방식은 목록이 기본. README "방문자와 주인".
+- 화면은 하나지만 **방문자는 카드만**(이름·그림·설명·분류, 서버도 `publicView` 값만 보냄), **주인(허브 로그인)은 상태·사용량·관리 기능까지**. 화면 제목은 "웅스튜디오"(2026-11-25, 저장소·주소·기능 이름 "앱 허브"는 그대로). 로그인 입구는 그 제목(누르면 암호 창). 보기 방식은 목록이 기본. README "방문자와 주인".
 - `web/`: 정적 화면(빌드 없음). 규칙(정렬·배지·링크 숨김)은 `web/js/view.js`의 순수 함수, 그리기·이벤트는 `web/js/app.js`, 서버 통신은 `web/js/api.js`. 앱에서 받은 글자는 `textContent`로만 넣는다(innerHTML 금지).
 - `src/worker.js`: `/api/*`만 처리. 새 API는 `src/api/<이름>.js`에 `GET/PUT/POST/DELETE`를 만들고 `ROUTES`에 추가. 허브 API는 `register`(등록, 비밀값 없음·같은 주인만, `replaces`로 주소 옮기기)·`apps`(목록·숨기기·삭제)·`refresh`(지금 확인)·`login`/`logout`/`session`(허브 로그인: 한 번 로그인하면 woongstudio.com 아래 앱 전부 편집, `src/lib/session.js`, README "허브 로그인").
 - `src/lib/hub.js`: 주소 정리·주인 비교(`ownerOf`: 내 도메인 또는 workers.dev 계정)·앱 확인(100KB 제한, 리다이렉트 안 따라감, 10초 제한)·판정·25개 선택(순수 함수). `src/lib/store.js`: D1 읽기·쓰기.
