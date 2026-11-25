@@ -1,7 +1,7 @@
 // 앱 허브 화면: 그리기와 이벤트만 맡는다. 규칙(정렬·배지·링크)은 view.js의 순수 함수에 있다.
 // 앱에서 받은 글자(이름·설명 등)는 textContent로만 넣는다(innerHTML을 쓰지 않는다 = 자동으로 안전 처리).
 import * as api from './api.js';
-import { chipList, sortApps, filterApps, summarize, displayName, usageText, badges, linkFor, tileInfo } from './view.js';
+import { chipList, sortApps, filterApps, summarize, displayName, usageText, badges, linkFor, tileInfo, chipKeyTarget, pushToast, toastTimeout } from './view.js';
 
 const $ = id => document.getElementById(id);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -12,21 +12,74 @@ const params = new URLSearchParams(location.search);
 const returnTo = params.get('return') || '';
 const wantLogin = params.get('login') === '1';
 const loginMsg = text => { $('loginMsg').textContent = text; };
-const status = text => { $('status').textContent = text; };
 
-function renderChips() {
+// ── 떠 있는 알림 ── kind: info(5초 뒤 사라짐) | error(✕로 닫을 때까지) | busy(다음 알림이 오면 사라짐). 목록 규칙은 view.js pushToast.
+let toasts = [], toastSeq = 0;
+function status(text, kind = 'info') {
+  if (!text) return;
+  const item = { id: ++toastSeq, text, kind };
+  toasts = pushToast(toasts, item);
+  drawToasts();
+  const ms = toastTimeout(kind);
+  if (ms) setTimeout(() => dropToast(item.id), ms);
+}
+function dropToast(id) { toasts = toasts.filter(t => t.id !== id); drawToasts(); }
+function drawToasts() {
+  const box = $('toasts');
+  const keep = new Set(toasts.map(t => t.id));
+  for (const n of box.children) {
+    if (keep.has(Number(n.dataset.id)) || n.hasAttribute('data-ending-style')) continue;
+    n.setAttribute('data-ending-style', ''); // 퇴장 움직임(styles.css) 뒤에 지운다
+    setTimeout(() => n.remove(), 220);
+  }
+  for (const t of toasts) if (!box.querySelector(`[data-id="${t.id}"]`)) box.append(toastEl(t));
+  placeToasts();
+}
+function toastEl(t) {
+  const n = el('div', 'toast');
+  n.dataset.id = String(t.id); n.dataset.kind = t.kind;
+  if (t.kind === 'error') n.setAttribute('role', 'alert');
+  n.append(el('span', 'toast-text', t.text));
+  if (t.kind === 'error') {
+    const x = el('button', 'toast-x', '✕'); x.type = 'button'; x.setAttribute('aria-label', '알림 닫기');
+    x.addEventListener('click', () => dropToast(t.id));
+    n.append(x);
+  }
+  return n;
+}
+// 창(showModal)이 열려 있으면 창 바깥은 전부 누를 수 없게 된다(inert). 그래서 알림 상자를 열린 창 안으로 옮겨
+// 창 위에 보이고 ✕도 눌리게 한다. 창이 닫히면 페이지로 돌려놓는다.
+function placeToasts() {
+  const box = $('toasts');
+  const host = document.querySelector('dialog[open]') || document.body;
+  if (box.parentNode !== host) host.append(box);
+}
+
+// 분류 칩 = 라디오 묶음. 고른 칩만 Tab 자리(tabindex 0)이고, 화살표·Home·End로 옮기면 바로 고른다(view.js chipKeyTarget).
+function renderChips(focus = false) {
   const box = $('chips'); box.replaceChildren();
   const list = chipList(apps);
   if (!list.includes(category)) category = '전체'; // 고른 분류의 앱이 없어졌으면 전체로
   box.hidden = !list.length;
   for (const c of list) {
+    const on = c === category;
     const b = el('button', 'chip', c);
     b.type = 'button';
-    b.setAttribute('aria-pressed', String(c === category));
-    b.addEventListener('click', () => { category = c; renderChips(); renderList(); });
+    b.setAttribute('role', 'radio');
+    b.setAttribute('aria-checked', String(on));
+    b.tabIndex = on ? 0 : -1;
+    b.addEventListener('click', () => pickCategory(c));
+    b.addEventListener('keydown', e => {
+      const i = chipKeyTarget(e.key, list.indexOf(category), list.length, getComputedStyle(box).direction);
+      if (i === null) return;
+      e.preventDefault();
+      pickCategory(list[i], true);
+    });
     box.append(b);
   }
+  if (focus) box.querySelector('[aria-checked="true"]')?.focus();
 }
+function pickCategory(c, focus = false) { category = c; renderChips(focus); renderList(); }
 
 function renderSummary() {
   const s = summarize(apps);
@@ -59,7 +112,9 @@ function detail(app) {
   title.id = 'appTitle';
   title.append(el('span', 'card-name', displayName(app)));
   body.append(title);
-  body.append(el('p', 'card-summary', app.summary || (app.hasMeta ? '' : app.url.replace(/^https:\/\//, ''))));
+  const desc = el('p', 'card-summary', app.summary || (app.hasMeta ? '' : app.url.replace(/^https:\/\//, '')));
+  desc.id = 'appDesc';
+  body.append(desc);
 
   const tags = el('div', 'tags');
   if (app.status) tags.append(el('span', 'pill pill-status s-' + ({ 운영중: 'live', 개발중: 'dev', 중단: 'stop' }[app.status]), app.status));
@@ -84,7 +139,7 @@ function detail(app) {
     hide.addEventListener('click', async () => {
       hide.disabled = true;
       const r = await api.setHidden(app.url, !app.hidden).catch(() => ({ ok: false }));
-      if (!r.ok) { status(r.status === 401 ? '편집 암호가 맞지 않습니다.' : '바꾸지 못했습니다.'); hide.disabled = false; return; }
+      if (!r.ok) { status(r.status === 401 ? '편집 암호가 맞지 않습니다.' : '바꾸지 못했습니다.', 'error'); hide.disabled = false; return; }
       app.hidden = !app.hidden; status(app.hidden ? `${displayName(app)}: 숨겼습니다(로그인하지 않은 사람에게 안 보임)` : `${displayName(app)}: 다시 보입니다`);
       renderList(); openDetail(app);
     });
@@ -99,7 +154,7 @@ function detail(app) {
       }
       clearTimeout(armed); armed = null; del.disabled = true;
       const r = await api.removeApp(app.url).catch(() => ({ ok: false }));
-      if (!r.ok) { status('삭제하지 못했습니다.'); del.disabled = false; return; }
+      if (!r.ok) { status('삭제하지 못했습니다.', 'error'); del.disabled = false; return; }
       apps = apps.filter(a => a.url !== app.url);
       $('appDlg').close();
       status(`${displayName(app)}: 삭제했습니다. 앱이 다시 배포되면 스스로 다시 등록됩니다.`);
@@ -113,7 +168,9 @@ function detail(app) {
 
 function openDetail(app) {
   $('appBody').replaceChildren(detail(app));
-  if (!$('appDlg').open) $('appDlg').showModal();
+  // 화면 읽기 프로그램이 제목 다음에 한 줄 설명도 읽게(설명이 없으면 연결하지 않는다)
+  if ($('appDesc').textContent) $('appDlg').setAttribute('aria-describedby', 'appDesc'); else $('appDlg').removeAttribute('aria-describedby');
+  if (!$('appDlg').open) { $('appDlg').showModal(); placeToasts(); }
 }
 
 // 격자 칸: 대표 화면(정사각형) + 이름(+ 주인에게만 상태 한 줄). 누르면 바로 넘어가지 않고 설명 창이 뜬다.
@@ -155,7 +212,7 @@ async function load() {
     renderSummary(); renderEdit(); renderChips(); renderList();
     return r;
   } catch (e) {
-    status('서버에 연결하지 못했습니다. 잠시 후 새로고침해 주세요.');
+    status('서버에 연결하지 못했습니다. 잠시 후 새로고침해 주세요.', 'error');
     return null;
   }
 }
@@ -187,7 +244,7 @@ async function openLogin() {
   $('tokenIn').value = '';
   loginMsg(firstTime ? '아직 편집 암호가 없습니다. 앞으로 쓸 편집 암호를 정해 주세요. 다른 기기에서도 이 암호로 고칩니다.'
     : returnTo ? '로그인하면 원래 앱으로 돌아가 바로 저장할 수 있습니다. 이 브라우저에서는 다른 앱도 다시 묻지 않습니다.' : '');
-  if (!$('loginDlg').open) $('loginDlg').showModal();
+  if (!$('loginDlg').open) { $('loginDlg').showModal(); placeToasts(); }
   $('tokenIn').focus();
 }
 
@@ -209,10 +266,10 @@ $('tokenForm').addEventListener('submit', async e => {
 });
 
 $('refreshBtn').addEventListener('click', async () => {
-  const b = $('refreshBtn'); b.disabled = true; status('앱들을 확인하는 중… (앱마다 최대 10초)');
+  const b = $('refreshBtn'); b.disabled = true; status('앱들을 확인하는 중… (앱마다 최대 10초)', 'busy');
   const r = await api.refreshAll().catch(() => ({ ok: false }));
   b.disabled = false;
-  if (!r.ok) { status(r.status === 401 ? '편집 암호가 맞지 않습니다.' : '확인하지 못했습니다. 잠시 후 다시 눌러 주세요.'); return; }
+  if (!r.ok) { status(r.status === 401 ? '편집 암호가 맞지 않습니다.' : '확인하지 못했습니다. 잠시 후 다시 눌러 주세요.', 'error'); return; }
   const d = r.data;
   status(`${d.checked}개 확인: 정상 ${d.ok}, 응답 없음 ${d.down}, 허브 준비 전 ${d.legacy}` + (d.total > d.checked ? ` (나머지 ${d.total - d.checked}개는 다음에)` : ''));
   await load();
@@ -223,6 +280,7 @@ $('appClose').addEventListener('click', () => $('appDlg').close());
 $('appDlg').addEventListener('click', e => { if (e.target === $('appDlg')) $('appDlg').close(); });
 
 renderChips();
+for (const d of document.querySelectorAll('dialog')) d.addEventListener('close', placeToasts);
 // 예전 방식(이 기기에 암호를 기억)으로 편집하던 브라우저는 한 번 허브 로그인으로 바꿔 준다(쿠키가 생겨야 다른 앱도 편집된다).
 async function upgradeLegacy() {
   const legacy = api.getToken();

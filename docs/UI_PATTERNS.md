@@ -97,12 +97,19 @@ JS는 상태 속성만 바꾸고, 모양은 CSS가 속성을 보고 정한다. �
 - 글자와 바탕 대비를 확인한다(Base UI는 APCA 기준 권장). 라이트·다크 둘 다.
 - 그림만 있는 버튼에는 `aria-label`, 입력칸에는 `<label>`.
 
-## 8. 이 허브에 적용할 후보 (우선순위 순)
-1. 창 열고 닫을 때 부드럽게(6장 `@starting-style`), 창 열린 동안 뒤 스크롤 막기, `aria-describedby`.
-2. 분류 칩을 `radiogroup` + 화살표 키 이동(5장). 순수 함수(다음 칸 번호 계산)는 `view.js` + `tests/`.
-3. `#status`를 떠 있는 알림으로(5초 뒤 사라짐, 오류는 남김, `aria-live`).
-4. 둥글기를 `--radius` 하나에서 계산(2장), 버튼 종류 이름 정리(3장).
-5. 삭제 확인을 "두 번 누르기" 대신 위험 창(AlertDialog: 바깥 눌러도 안 닫힘, 초점은 [취소]에) 으로 바꿀지 검토.
+## 8. 이 허브에 적용한 것과 남은 후보
+적용함(2026-11-25):
+1. 창 등장·퇴장 움직임(`@starting-style`), 창 열린 동안 뒤 스크롤 막기(`html:has(dialog[open])`), 설명 창 `aria-describedby`.
+2. 분류 칩 = `role="radiogroup"` + 각 칩 `role="radio"` `aria-checked`, 화살표·Home·End로 이동하면 바로 고름(`view.js` `chipKeyTarget`, 테스트 있음).
+3. `#status` 줄 → 화면 아래 떠 있는 알림(`#toasts`). 보통 5초 뒤 사라짐, 오류는 ✕로 닫을 때까지, "확인하는 중"은 다음 알림이 오면 사라짐, 최대 3개(`view.js` `pushToast`). `app.js`에서는 `status(글, 'info' | 'error' | 'busy')`.
+4. 둥글기 `--radius` 하나에서 `--r-sm`·`--r-md`·`--r-lg`·`--r-xl`·`--r-full` 계산, 버튼 종류 이름 주석(`styles.css`).
+
+남은 후보:
+5. 삭제 확인을 "두 번 누르기" 대신 위험 창(AlertDialog)으로. 사용자와 상의해 지금 방식 유지(취향 문제).
+
+함정(직접 겪음):
+- `showModal()`로 창을 열면 창 바깥은 전부 **누를 수 없는 상태(inert)**가 된다. popover로 맨 위 층에 띄워도 보이기만 하고 클릭은 창으로 빠진다. 그래서 알림 상자는 창이 열리면 **그 창 안으로 옮기고**, 창이 닫히면(`close` 이벤트) 페이지로 돌려놓는다(`app.js` `placeToasts`).
+- 창이 열린 동안 `position:fixed` 알림은 창의 `transform`이 `none`일 때만 화면 기준으로 붙는다. 창의 열린 상태 `transform`은 `none`으로 둔다.
 
 ## 다시 확인하는 법 (클라우드 세션)
 - Base UI 문서 원문: `npm pack @base-ui/react` → 압축 풀면 `package/docs/react/...md`(부품별 속성 표 포함).

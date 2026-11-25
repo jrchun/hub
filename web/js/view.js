@@ -90,3 +90,30 @@ export function tileInfo(app, now = Date.now()) {
   const sub = bs.length ? bs[0].text.replace(/ \((\d+)일째\)$/, ' $1일') : app.usage ? `30일 ${app.usage.last30d}회` : '';
   return { tone, sub };
 }
+
+// 분류 칩 키보드 이동(WAI-ARIA 라디오 묶음, docs/UI_PATTERNS.md 5장).
+// ←↑ 이전, →↓ 다음(끝에서 처음으로 돈다), Home/PageUp 처음, End/PageDown 끝. 오른쪽→왼쪽 언어(dir='rtl')는 좌우를 뒤집는다.
+// 이동할 칸 번호를 돌려주고, 상관없는 키면 null.
+export function chipKeyTarget(key, current, count, dir = 'ltr') {
+  if (count <= 0) return null;
+  if (dir === 'rtl' && (key === 'ArrowLeft' || key === 'ArrowRight')) key = key === 'ArrowLeft' ? 'ArrowRight' : 'ArrowLeft';
+  const at = Math.min(Math.max(current, 0), count - 1);
+  switch (key) {
+    case 'ArrowLeft': case 'ArrowUp': return (at - 1 + count) % count;
+    case 'ArrowRight': case 'ArrowDown': return (at + 1) % count;
+    case 'Home': case 'PageUp': return 0;
+    case 'End': case 'PageDown': return count - 1;
+    default: return null;
+  }
+}
+
+// 떠 있는 알림(docs/UI_PATTERNS.md 5장 Toast). kind: info(5초 뒤 사라짐) | error(직접 닫을 때까지) | busy(다음 알림이 오면 사라짐)
+export const TOAST_LIMIT = 3;
+export const TOAST_TIMEOUT = 5000;
+// 새 알림을 넣은 목록: 진행 중(busy) 알림은 빼고, 같은 글이 이미 있으면 빼고 맨 뒤에 다시, 넘치면 오래된 것부터 버린다.
+export function pushToast(list, item, limit = TOAST_LIMIT) {
+  const kept = list.filter(t => t.kind !== 'busy' && t.text !== item.text);
+  return [...kept, item].slice(-limit);
+}
+// 알림이 저절로 사라질 때까지의 시간(ms). 안 사라지면 0.
+export const toastTimeout = kind => (kind === 'info' ? TOAST_TIMEOUT : 0);

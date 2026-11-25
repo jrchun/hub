@@ -74,9 +74,8 @@
     <p class="hint">매일 08:00 자동 확인 · 숨기기·삭제는 앱을 눌러서</p>
   </div>
 
-  <nav class="chips" id="chips" aria-label="분류"></nav>
-
-  <p class="hint" id="status" role="status" aria-live="polite"></p>
+  <!-- 분류: 하나만 고르는 라디오 묶음. Tab 한 번으로 들어와 화살표로 고른다(docs/UI_PATTERNS.md 5장). -->
+  <div class="chips" id="chips" role="radiogroup" aria-label="분류"></div>
 
   <main class="list grid3" id="list"></main>
 
@@ -86,6 +85,8 @@
     <div id="appBody"></div>
   </dialog>
 </div>
+<!-- 떠 있는 알림(화면 아래). 5초 뒤 사라지고, 오류는 직접 닫을 때까지 남는다. 창이 열리면 app.js가 창 안으로 옮긴다. -->
+<div class="toasts" id="toasts" role="status" aria-live="polite"></div>
 <script type="module" src="js/app.js"></script>
 </body>
 </html>
