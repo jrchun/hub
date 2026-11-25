@@ -18,6 +18,13 @@ export function sortApps(apps) {
   });
 }
 
+// 보여 줄 분류 칩: '전체' + 앱이 있는 분류만(정해진 순서대로). 분류가 하나뿐이면 칩이 필요 없다(빈 배열).
+export function chipList(apps) {
+  const used = new Set(apps.map(a => a.category).filter(Boolean));
+  const list = CATEGORIES.filter(c => c !== '전체' && used.has(c));
+  return list.length >= 2 ? ['전체', ...list] : [];
+}
+
 // 분류 필터. '전체'면 그대로.
 export const filterApps = (apps, category) => (!category || category === '전체' ? apps : apps.filter(a => a.category === category));
 

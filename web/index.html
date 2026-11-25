@@ -28,7 +28,7 @@
         <button type="button" id="editBtn" class="ghost" hidden>잠그기</button>
       </div>
     </div>
-    <p class="sub num" id="summary" aria-live="polite">불러오는 중</p>
+    <p class="sub" id="summary" aria-live="polite">불러오는 중</p>
   </header>
 
   <form class="token" id="tokenForm" hidden>
@@ -38,9 +38,11 @@
   </form>
 
   <div class="edit-bar" id="editBar" hidden>
-    <button type="button" id="refreshBtn" class="primary">지금 확인</button>
-    <span class="hint">매일 08:00 자동 확인 · 숨기기·삭제는 목록 보기에서</span>
-    <button type="button" id="logoutAll" class="ghost">모든 기기에서 로그아웃</button>
+    <div class="edit-actions">
+      <button type="button" id="refreshBtn" class="primary">지금 확인</button>
+      <button type="button" id="logoutAll" class="ghost">모든 기기에서 로그아웃</button>
+    </div>
+    <p class="hint">매일 08:00 자동 확인 · 숨기기·삭제는 목록 보기에서</p>
   </div>
 
   <nav class="chips" id="chips" aria-label="분류"></nav>

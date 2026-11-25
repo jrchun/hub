@@ -1,7 +1,7 @@
 // 앱 허브 화면: 그리기와 이벤트만 맡는다. 규칙(정렬·배지·링크)은 view.js의 순수 함수에 있다.
 // 앱에서 받은 글자(이름·설명 등)는 textContent로만 넣는다(innerHTML을 쓰지 않는다 = 자동으로 안전 처리).
 import * as api from './api.js';
-import { CATEGORIES, sortApps, filterApps, summarize, displayName, usageText, badges, linkFor, tileInfo } from './view.js';
+import { chipList, sortApps, filterApps, summarize, displayName, usageText, badges, linkFor, tileInfo } from './view.js';
 
 const $ = id => document.getElementById(id);
 const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
@@ -17,7 +17,10 @@ const status = text => { $('status').textContent = text; };
 
 function renderChips() {
   const box = $('chips'); box.replaceChildren();
-  for (const c of CATEGORIES) {
+  const list = chipList(apps);
+  if (!list.includes(category)) category = '전체'; // 고른 분류의 앱이 없어졌으면 전체로
+  box.hidden = !list.length;
+  for (const c of list) {
     const b = el('button', 'chip', c);
     b.type = 'button';
     b.setAttribute('aria-pressed', String(c === category));
@@ -63,7 +66,7 @@ function card(app) {
   if (app.category) tags.append(el('span', 'pill', app.category));
   if (canEdit) for (const b of badges(app)) tags.append(el('span', 'pill tone-' + b.tone, b.text));
   if (tags.childElementCount) body.append(tags);
-  if (canEdit) body.append(el('p', 'card-usage num', usageText(app)));
+  if (canEdit) body.append(el('p', 'card-usage', usageText(app)));
   if (!href) body.append(el('p', 'card-note', '링크 숨김(공개 안 함)'));
 
   main.append(shot(app), body);
@@ -93,7 +96,7 @@ function card(app) {
       if (!r.ok) { status('삭제하지 못했습니다.'); del.disabled = false; return; }
       apps = apps.filter(a => a.url !== app.url);
       status(`${displayName(app)}: 삭제했습니다. 앱이 다시 배포되면 스스로 다시 등록됩니다.`);
-      renderSummary(); renderList();
+      renderSummary(); renderChips(); renderList();
     });
     acts.append(hide, del);
     art.append(acts);
@@ -137,7 +140,7 @@ async function load() {
   try {
     const r = await api.getApps();
     apps = r.apps || []; canEdit = !!r.canEdit;
-    renderSummary(); renderEdit(); renderList();
+    renderSummary(); renderEdit(); renderChips(); renderList();
     return r;
   } catch (e) {
     status('서버에 연결하지 못했습니다. 잠시 후 새로고침해 주세요.');
