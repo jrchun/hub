@@ -226,6 +226,12 @@ function parse(text) {
 
 // 저장된 행 → 화면용 값. 원문에서 필요한 것만 글자·숫자로 꺼낸다(나머지는 버린다).
 // 그림 주소는 등록된 주소 + /og.png로만 만든다(app.json에 적힌 주소는 쓰지 않는다).
+// 방문자(로그인 안 한 사람)에게 보낼 값: 카드에 필요한 것만. 상태·실패 횟수·확인 시각·사용 기록은 주인만 본다.
+export function publicView(view) {
+  const { url, image, hasMeta, name, emoji, summary, category, status } = view;
+  return { url, image, hasMeta, name, emoji, summary, category, status, public: view.public };
+}
+
 export function toView(row) {
   const m = parse(row.meta), h = parse(row.health);
   const category = CATEGORIES.includes(m?.category) ? m.category : (m ? '기타' : '');

@@ -75,8 +75,9 @@ export function linkFor(app) {
 }
 
 // 격자 칸에 쓸 값: 상태 점 색(tone)과 이름 아래 한 줄(sub). 문제가 있으면 그것을, 없으면 사용량을 보여 준다.
-//   tone: ok(정상) | bad(응답 없음) | warn(허브 준비 전) | muted(쉬는 중)
+//   tone: ok(정상) | bad(응답 없음) | warn(허브 준비 전) | muted(쉬는 중) | none(방문자: 상태를 받지 않아 점을 그리지 않음)
 export function tileInfo(app, now = Date.now()) {
+  if (!app.state) return { tone: 'none', sub: app.category || '' }; // 방문자에게는 상태·사용량을 보내지 않는다(publicView)
   const bs = badges(app, now).filter(b => b.text !== '숨김');
   const tone = app.state === 'down' ? 'bad' : app.state === 'legacy' ? 'warn' : bs.some(b => b.text === '쉬는 중') ? 'muted' : 'ok';
   const sub = bs.length ? bs[0].text.replace(/ \((\d+)일째\)$/, ' $1일') : app.usage ? `30일 ${app.usage.last30d}회` : (app.category || '');
