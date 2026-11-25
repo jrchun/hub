@@ -176,7 +176,7 @@ function openDetail(app) {
 // 격자 칸: 대표 화면(정사각형) + 이름(+ 주인에게만 상태 한 줄). 누르면 바로 넘어가지 않고 설명 창이 뜬다.
 function tile(app) {
   const { tone, sub } = tileInfo(app);
-  // t-<상태>: 응답 없음이면 칸 아래에 줄무늬 테이프를 그린다(styles.css). 방문자는 t-none.
+  // t-<상태>: 응답 없음이면 칸 테두리를 빨갛게(styles.css). 방문자는 t-none.
   const t = el('button', 'tile t-' + tone + (app.hidden ? ' is-hidden' : ''));
   t.type = 'button';
   t.setAttribute('aria-haspopup', 'dialog');
