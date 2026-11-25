@@ -228,8 +228,8 @@ function parse(text) {
 // 그림 주소는 등록된 주소 + /og.png로만 만든다(app.json에 적힌 주소는 쓰지 않는다).
 // 방문자(로그인 안 한 사람)에게 보낼 값: 카드에 필요한 것만. 상태·실패 횟수·확인 시각·사용 기록은 주인만 본다.
 export function publicView(view) {
-  const { url, image, hasMeta, name, emoji, summary, category, status } = view;
-  return { url, image, hasMeta, name, emoji, summary, category, status, public: view.public };
+  const { url, image, hasMeta, name, summary, category, status } = view;
+  return { url, image, hasMeta, name, summary, category, status, public: view.public };
 }
 
 export function toView(row) {
@@ -245,7 +245,6 @@ export function toView(row) {
     image: row.url + '/og.png',
     hasMeta: !!m,
     name: str(m?.name, 60),
-    emoji: str(m?.emoji, 16),
     summary: str(m?.summary, 200),
     category, status,
     public: m ? m.public !== false : true,

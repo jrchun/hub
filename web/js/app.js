@@ -41,7 +41,8 @@ function renderSummary() {
 
 function shot(app) {
   const box = el('div', 'shot');
-  const emoji = el('span', 'shot-emoji', app.emoji || '🧩');
+  // 그림이 없을 때 대신 보여 줄 이름 첫 글자(이모지는 쓰지 않는다)
+  const emoji = el('span', 'shot-emoji', displayName(app).slice(0, 1));
   emoji.setAttribute('aria-hidden', 'true');
   const img = new Image();
   img.alt = ''; img.loading = 'lazy'; img.decoding = 'async';
@@ -60,7 +61,6 @@ function card(app) {
 
   const body = el('div', 'card-body');
   const title = el('h2', 'card-title');
-  if (app.emoji) title.append(el('span', 'card-emoji', app.emoji));
   title.append(el('span', 'card-name', displayName(app)));
   body.append(title);
   body.append(el('p', 'card-summary', app.summary || (app.hasMeta ? '' : app.url.replace(/^https:\/\//, ''))));
