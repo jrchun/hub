@@ -12,21 +12,45 @@
 <meta property="og:image" content="/og.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Jua&display=swap">
 <link rel="stylesheet" href="styles.css">
 </head>
 <body>
 <div class="wrap">
   <header class="head">
     <div class="head-row">
-      <!-- 제목을 누르면 주인 로그인 창(방문자 눈에는 그냥 제목) -->
-      <h1><button type="button" id="titleBtn" class="title-btn">웅 스튜디오</button></h1>
+      <div class="brand">
+        <!-- 꼬마 공장 그림(직접 그린 SVG, 색은 styles.css 변수). 굴뚝 연기는 움직임 줄이기 설정이면 멈춘다. -->
+        <svg class="factory" viewBox="0 0 64 56" aria-hidden="true" focusable="false">
+          <circle class="puff p1" cx="49" cy="10" r="4"/>
+          <circle class="puff p2" cx="52" cy="6" r="3"/>
+          <circle class="puff p3" cx="47" cy="4" r="2.5"/>
+          <rect class="f-chim" x="44" y="12" width="9" height="22" rx="2"/>
+          <rect class="f-band" x="44" y="16" width="9" height="3"/>
+          <path class="f-body" d="M5 52V30l12-8v8l12-8v8l12-8v30z"/>
+          <rect class="f-win" x="10" y="35" width="7" height="6" rx="1.5"/>
+          <rect class="f-win w2" x="21" y="35" width="7" height="6" rx="1.5"/>
+          <rect class="f-door" x="32" y="38" width="7" height="14" rx="1.5"/>
+          <path class="f-floor" d="M2 52h60"/>
+        </svg>
+        <div class="brand-text">
+          <!-- 제목을 누르면 주인 로그인 창(방문자 눈에는 그냥 제목) -->
+          <h1><button type="button" id="titleBtn" class="title-btn">웅 스튜디오</button></h1>
+          <p class="tagline">작은 앱을 만드는 꼬마 공장</p>
+        </div>
+      </div>
       <div class="head-actions">
         <button type="button" id="editBtn" class="ghost" hidden>잠그기</button>
       </div>
     </div>
     <p class="sub" id="summary" aria-live="polite" hidden></p>
   </header>
+
+  <!-- 컨베이어 벨트(꾸밈). 상자가 왼쪽에서 오른쪽으로 실려 간다. -->
+  <div class="belt" aria-hidden="true">
+    <span class="crate c1"></span><span class="crate c2"></span><span class="crate c3"></span>
+    <div class="belt-track"></div>
+  </div>
 
   <!-- 주인 로그인 창: 제목("웅 스튜디오")을 누르거나, 다른 앱에서 "허브에서 로그인"으로 넘어오면(?login=1) 뜬다 -->
   <dialog class="dlg" id="loginDlg" aria-labelledby="loginTitle">
