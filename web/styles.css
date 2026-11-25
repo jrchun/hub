@@ -18,7 +18,9 @@
   color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
-body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.55}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.55;
+  /* 한글은 단어(띄어쓰기) 단위로 줄을 바꾼다(기본값은 글자 중간에서 끊김). 긴 주소 등은 넘치기 전에만 자른다. */
+  word-break:keep-all;overflow-wrap:anywhere}
 /* 폰(400px)이 기준. 좌우 여백은 최소 16px, 페이지 전체가 가로로 밀리면 안 된다. */
 .wrap{max-width:960px;margin:0 auto;padding-block:20px 48px;
   padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));
@@ -26,7 +28,7 @@ body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-
 .head{display:flex;flex-direction:column;gap:4px}
 h1{font-size:1.5rem;margin:0;font-weight:700}
 h2{font-size:1.05rem;margin:0;font-weight:600}
-.sub{color:var(--muted);margin:0;font-size:.86rem}
+.sub{color:var(--muted);margin:0;font-size:.86rem;font-variant-numeric:tabular-nums}
 .hint{color:var(--muted);font-size:.82rem;margin:0}
 .num{font-family:var(--mono);font-variant-numeric:tabular-nums}
 .panel{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px;min-width:0}
@@ -49,13 +51,15 @@ button.ghost{background:transparent}
 button:disabled{opacity:.6;cursor:default}
 button.danger{color:var(--bad)}
 button.danger.armed{background:var(--bad);border-color:var(--bad);color:var(--surface)}
-.edit-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.edit-bar{display:flex;flex-direction:column;gap:6px}
+.edit-actions{display:flex;flex-wrap:wrap;gap:8px}
 #status{min-height:1.3em}
 #status:empty{display:none}
 
-/* 분류 칩: 줄바꿈으로 넘친다(가로 스크롤 없음) */
-.chips{display:flex;flex-wrap:wrap;gap:6px}
-.chip{min-height:34px;padding:5px 12px;border-radius:999px;font-size:.84rem;background:var(--surface);color:var(--muted)}
+/* 분류 칩: 앱이 있는 분류만 보인다(view.js chipList). 한 줄로 두고, 넘치면 이 줄 안에서만 옆으로 민다(페이지는 안 밀림). */
+.chips{display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.chips::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;min-height:34px;padding:5px 12px;border-radius:999px;font-size:.84rem;background:var(--surface);color:var(--muted);white-space:nowrap}
 .chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--surface)}
 
 /* 카드 목록: 폰은 한 줄에 하나, 넓으면 여러 개 */
@@ -79,7 +83,7 @@ a.card-main:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .card-name{overflow-wrap:anywhere}
 .card-summary{margin:0;color:var(--muted);font-size:.88rem;overflow-wrap:anywhere}
 .card-summary:empty{display:none}
-.card-usage{margin:0;color:var(--muted);font-size:.78rem}
+.card-usage{margin:0;color:var(--muted);font-size:.78rem;font-variant-numeric:tabular-nums}
 .card-note{margin:0;color:var(--muted);font-size:.76rem}
 .tags{display:flex;flex-wrap:wrap;gap:5px}
 .pill{font-size:.74rem;padding:2px 8px;border-radius:999px;background:var(--sunk);color:var(--muted);border:1px solid transparent;white-space:nowrap}
@@ -99,12 +103,13 @@ a.card-main:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .seg button+button{border-left:1px solid var(--line)}
 .seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
 
-/* 3×3 격자: 폰(400px)에서 한 줄에 3칸 */
-.list.grid3{grid-template-columns:repeat(3, minmax(0, 1fr));gap:10px}
+/* 격자: 폰 홈 화면처럼 칸 크기는 거의 그대로, 넓으면 칸 수가 늘어난다(400px에서 3칸, 컴퓨터에서 7~8칸). */
+.list.grid3{grid-template-columns:repeat(auto-fill, minmax(100px, 1fr));gap:12px 10px}
 .tile{display:flex;flex-direction:column;gap:4px;min-width:0;color:inherit;text-decoration:none}
 .tile.is-hidden{opacity:.55}
 .tile-shot{height:auto;aspect-ratio:1;border:1px solid var(--line);border-radius:14px;background:var(--surface)}
 .tile-shot .shot-emoji{font-size:2.4rem}
+.tile-shot img{object-position:left top} /* 가로로 긴 대표 화면(1200×630 등)도 제목이 있는 왼쪽 위가 보이게 */
 a.tile:active .tile-shot{transform:scale(.97)}
 a.tile:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:14px}
 .tile-dot{position:absolute;top:7px;right:7px;width:10px;height:10px;border-radius:50%;border:2px solid var(--surface);z-index:1}

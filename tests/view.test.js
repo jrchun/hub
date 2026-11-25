@@ -1,7 +1,7 @@
 // 화면 규칙(web/js/view.js, DOM 없음). 실행: npm test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { sortApps, filterApps, summarize, displayName, usageText, badges, linkFor, agoText, tileInfo } from '../web/js/view.js';
+import { chipList, sortApps, filterApps, summarize, displayName, usageText, badges, linkFor, agoText, tileInfo } from '../web/js/view.js';
 
 const NOW = Date.parse('2026-11-15T12:00:00Z');
 const day = n => new Date(NOW - n * 86400000).toISOString();
@@ -61,4 +61,11 @@ test('격자 칸: 문제가 있으면 그것을, 없으면 사용량을 한 줄�
   assert.deepEqual(tileInfo(app({ usage: { last30d: 0, lastUsedAt: day(40) } }), NOW), { tone: 'muted', sub: '쉬는 중' });
   assert.deepEqual(tileInfo(app({ hidden: true }), NOW), { tone: 'ok', sub: '30일 3회' }); // 숨김 표시는 칸 흐림으로만
   assert.deepEqual(tileInfo(app({ usage: null, category: '돈' }), NOW), { tone: 'ok', sub: '돈' });
+});
+
+test('분류 칩: 앱이 있는 분류만 정해진 순서로, 분류가 하나뿐이면 칩 없음', () => {
+  assert.deepEqual(chipList([{ category: '건강' }, { category: '돈' }, { category: '돈' }]), ['전체', '건강', '돈']);
+  assert.deepEqual(chipList([{ category: '돈' }, { category: '돈' }]), []);
+  assert.deepEqual(chipList([{ category: '' }, { category: '기타' }, { category: '생활' }]), ['전체', '생활', '기타']);
+  assert.deepEqual(chipList([]), []);
 });
