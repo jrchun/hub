@@ -1,7 +1,7 @@
 // 화면 규칙(web/js/view.js, DOM 없음). 실행: npm test
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { chipList, sortApps, filterApps, summarize, displayName, usageText, badges, linkFor, agoText, tileInfo } from '../web/js/view.js';
+import { chipList, sortApps, filterApps, summarize, displayName, usageText, badges, linkFor, agoText, tileInfo, chipKeyTarget, pushToast, toastTimeout } from '../web/js/view.js';
 
 const NOW = Date.parse('2026-11-15T12:00:00Z');
 const day = n => new Date(NOW - n * 86400000).toISOString();
@@ -68,4 +68,35 @@ test('분류 칩: 앱이 있는 분류만 정해진 순서로, 분류가 하나�
   assert.deepEqual(chipList([{ category: '돈' }, { category: '돈' }]), []);
   assert.deepEqual(chipList([{ category: '' }, { category: '기타' }, { category: '생활' }]), ['전체', '생활', '기타']);
   assert.deepEqual(chipList([]), []);
+});
+
+test('분류 칩 키보드 이동: 화살표·처음·끝, 끝에서 돌기, 오른쪽→왼쪽 언어', () => {
+  assert.equal(chipKeyTarget('ArrowRight', 0, 4), 1);
+  assert.equal(chipKeyTarget('ArrowDown', 3, 4), 0); // 끝에서 처음으로
+  assert.equal(chipKeyTarget('ArrowLeft', 0, 4), 3); // 처음에서 끝으로
+  assert.equal(chipKeyTarget('ArrowUp', 2, 4), 1);
+  assert.equal(chipKeyTarget('Home', 2, 4), 0);
+  assert.equal(chipKeyTarget('PageUp', 2, 4), 0);
+  assert.equal(chipKeyTarget('End', 0, 4), 3);
+  assert.equal(chipKeyTarget('PageDown', 0, 4), 3);
+  assert.equal(chipKeyTarget('ArrowLeft', 1, 4, 'rtl'), 2);
+  assert.equal(chipKeyTarget('Enter', 1, 4), null);
+  assert.equal(chipKeyTarget('ArrowRight', 0, 0), null);
+  assert.equal(chipKeyTarget('ArrowRight', -1, 3), 1); // 고른 칸을 못 찾으면 첫 칸 기준
+});
+
+test('알림 목록: 진행 중 알림은 다음 알림이 오면 빠지고, 최대 3개, 같은 글은 하나만', () => {
+  let l = [];
+  l = pushToast(l, { text: '확인하는 중', kind: 'busy' });
+  l = pushToast(l, { text: '3개 확인', kind: 'info' });
+  assert.deepEqual(l.map(t => t.text), ['3개 확인']);
+  l = pushToast(l, { text: '오류', kind: 'error' });
+  l = pushToast(l, { text: 'a', kind: 'info' });
+  l = pushToast(l, { text: 'b', kind: 'info' });
+  assert.deepEqual(l.map(t => t.text), ['오류', 'a', 'b']);
+  l = pushToast(l, { text: '오류', kind: 'error' });
+  assert.deepEqual(l.map(t => t.text), ['a', 'b', '오류']);
+  assert.equal(toastTimeout('info'), 5000);
+  assert.equal(toastTimeout('error'), 0);
+  assert.equal(toastTimeout('busy'), 0);
 });
