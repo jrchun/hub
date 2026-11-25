@@ -99,12 +99,8 @@ a.card-main:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
 .card-actions{display:flex;gap:8px;padding:0 14px 14px;flex-wrap:wrap}
 .card-actions button{flex:1 1 auto}
 
-/* ── 보기 방식(목록/격자) ── */
+/* ── 머리 오른쪽(로그인했을 때 '잠그기') ── */
 .head-actions{display:flex;align-items:center;gap:8px}
-.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden}
-.seg button{border:0;border-radius:0;min-height:36px;padding:4px 12px;font-size:.82rem;background:var(--surface);color:var(--muted)}
-.seg button+button{border-left:1px solid var(--line)}
-.seg button[aria-pressed="true"]{background:var(--accent-soft);color:var(--accent);font-weight:600}
 
 /* 격자: 폰 홈 화면처럼 칸 크기는 거의 그대로, 넓으면 칸 수가 늘어난다(400px에서 3칸, 컴퓨터에서 7~8칸). */
 .list.grid3{grid-template-columns:repeat(auto-fill, minmax(100px, 1fr));gap:12px 10px}
@@ -132,3 +128,18 @@ a.tile:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-r
 .dlg label{font-size:.78rem;color:var(--muted);font-weight:500}
 .dlg #loginMsg:empty{display:none}
 .dlg-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}
+
+/* 격자 칸은 버튼(누르면 설명 창). 버튼 기본 모양을 지운다. */
+button.tile{background:none;border:0;padding:0;min-height:0;font:inherit;color:inherit;cursor:pointer;text-align:center;border-radius:14px}
+button.tile:hover .tile-shot{border-color:var(--accent)}
+button.tile:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button.tile:active .tile-shot{transform:scale(.97)}
+
+/* 앱 설명 창 */
+.app-dlg{padding:0;width:min(420px, calc(100vw - 32px));overflow:hidden}
+.app-dlg .card{border:0;border-radius:0}
+.detail-shot{height:200px}
+.dlg-x{position:absolute;top:10px;right:10px;z-index:2;min-height:36px;min-width:36px;padding:0;border-radius:50%;background:var(--surface);color:var(--fg);font-size:.95rem;line-height:1}
+.detail-go{margin-top:6px}
+a.go-link{display:flex;justify-content:center;align-items:center;min-height:44px;border-radius:8px;background:var(--accent);color:var(--surface);font-weight:600;text-decoration:none}
+a.go-link:focus-visible{outline:2px solid var(--accent);outline-offset:2px}

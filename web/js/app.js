@@ -11,10 +11,6 @@ let apps = [], canEdit = false, category = '전체', firstTime = false;
 const params = new URLSearchParams(location.search);
 const returnTo = params.get('return') || '';
 const wantLogin = params.get('login') === '1';
-// 보기 방식: 'list'(큰 카드, 기본) | 'grid'(격자). 이 기기에 기억한다.
-// 기억 칸 이름을 바꿔서(hub-view → hub-view2) 예전에 격자를 고른 기기도 한 번은 목록으로 시작한다.
-const VIEW_KEY = 'hub-view2';
-let viewMode = (() => { try { return localStorage.getItem(VIEW_KEY) || 'list'; } catch { return 'list'; } })();
 const loginMsg = text => { $('loginMsg').textContent = text; };
 const status = text => { $('status').textContent = text; };
 
@@ -53,14 +49,14 @@ function shot(app) {
   return box;
 }
 
-function card(app) {
-  const art = el('article', 'card' + (app.hidden ? ' is-hidden' : ''));
+// 앱 설명 창의 내용: 대표 그림, 이름, 한 줄 설명, 상태, [열기 →]. 주인에게는 사용량·응답 상태·숨기기/삭제도.
+function detail(app) {
+  const art = el('article', 'card detail' + (app.hidden ? ' is-hidden' : ''));
   const href = linkFor(app);
-  const main = el(href ? 'a' : 'div', 'card-main');
-  if (href) { main.href = href; main.target = '_blank'; main.rel = 'noopener noreferrer'; }
-
+  const s = shot(app); s.classList.add('detail-shot');
   const body = el('div', 'card-body');
   const title = el('h2', 'card-title');
+  title.id = 'appTitle';
   title.append(el('span', 'card-name', displayName(app)));
   body.append(title);
   body.append(el('p', 'card-summary', app.summary || (app.hasMeta ? '' : app.url.replace(/^https:\/\//, ''))));
@@ -70,10 +66,17 @@ function card(app) {
   if (canEdit) for (const b of badges(app)) tags.append(el('span', 'pill tone-' + b.tone, b.text));
   if (tags.childElementCount) body.append(tags);
   if (canEdit) body.append(el('p', 'card-usage', usageText(app)));
-  if (!href) body.append(el('p', 'card-note', '링크 숨김(공개 안 함)'));
 
-  main.append(shot(app), body);
-  art.append(main);
+  const go = el('div', 'detail-go');
+  if (href) {
+    const a = el('a', 'primary go-link', '열기 →');
+    a.href = href; a.target = '_blank'; a.rel = 'noopener noreferrer';
+    go.append(a);
+  } else {
+    go.append(el('p', 'card-note', '링크 숨김(공개 안 함)'));
+  }
+  body.append(go);
+  art.append(s, body);
 
   if (canEdit) {
     const acts = el('div', 'card-actions');
@@ -82,8 +85,8 @@ function card(app) {
       hide.disabled = true;
       const r = await api.setHidden(app.url, !app.hidden).catch(() => ({ ok: false }));
       if (!r.ok) { status(r.status === 401 ? '편집 암호가 맞지 않습니다.' : '바꾸지 못했습니다.'); hide.disabled = false; return; }
-      app.hidden = !app.hidden; status(app.hidden ? `${displayName(app)}: 숨겼습니다(편집 암호가 없는 사람에게 안 보임)` : `${displayName(app)}: 다시 보입니다`);
-      renderList();
+      app.hidden = !app.hidden; status(app.hidden ? `${displayName(app)}: 숨겼습니다(로그인하지 않은 사람에게 안 보임)` : `${displayName(app)}: 다시 보입니다`);
+      renderList(); openDetail(app);
     });
     // 삭제는 한 번 더 확인한다: 처음 누르면 "정말 삭제"로 바뀌고, 4초 안에 다시 눌러야 지운다.
     const del = el('button', 'danger', '삭제'); del.type = 'button';
@@ -98,6 +101,7 @@ function card(app) {
       const r = await api.removeApp(app.url).catch(() => ({ ok: false }));
       if (!r.ok) { status('삭제하지 못했습니다.'); del.disabled = false; return; }
       apps = apps.filter(a => a.url !== app.url);
+      $('appDlg').close();
       status(`${displayName(app)}: 삭제했습니다. 앱이 다시 배포되면 스스로 다시 등록됩니다.`);
       renderSummary(); renderChips(); renderList();
     });
@@ -107,17 +111,22 @@ function card(app) {
   return art;
 }
 
-// 격자 칸: 대표 화면(정사각형) + 이름 한 줄 + 상태 한 줄. 자세한 설명·버튼은 목록 보기에서.
+function openDetail(app) {
+  $('appBody').replaceChildren(detail(app));
+  if (!$('appDlg').open) $('appDlg').showModal();
+}
+
+// 격자 칸: 대표 화면(정사각형) + 이름(+ 주인에게만 상태 한 줄). 누르면 바로 넘어가지 않고 설명 창이 뜬다.
 function tile(app) {
-  const href = linkFor(app);
-  const t = el(href ? 'a' : 'div', 'tile' + (app.hidden ? ' is-hidden' : ''));
-  if (href) { t.href = href; t.target = '_blank'; t.rel = 'noopener noreferrer'; }
+  const t = el('button', 'tile' + (app.hidden ? ' is-hidden' : ''));
+  t.type = 'button';
+  t.setAttribute('aria-haspopup', 'dialog');
   const { tone, sub } = tileInfo(app);
   const s = shot(app); s.classList.add('tile-shot');
   if (tone !== 'none') { const dot = el('span', 'tile-dot dot-' + tone); dot.setAttribute('aria-hidden', 'true'); s.append(dot); }
   t.append(s, el('span', 'tile-name', displayName(app)));
   if (sub) t.append(el('span', 'tile-sub tone-text-' + tone, sub)); // 주인에게만(상태·사용량)
-  t.title = [displayName(app), app.summary, canEdit ? usageText(app) : ''].filter(Boolean).join('\n');
+  t.addEventListener('click', () => openDetail(app));
   return t;
 }
 
@@ -128,8 +137,7 @@ function renderList() {
     list.append(el('p', 'empty', apps.length ? `'${category}' 분류의 앱이 없습니다.` : '아직 등록된 앱이 없습니다. 앱이 배포되면 스스로 등록됩니다.'));
     return;
   }
-  list.classList.toggle('grid3', viewMode === 'grid');
-  for (const a of shown) list.append(viewMode === 'grid' ? tile(a) : card(a));
+  for (const a of shown) list.append(tile(a));
 }
 
 // 방문자: 카드만 보이고 관리 버튼은 없다. 주인은 제목 "웅 스튜디오"를 눌러 로그인한다(다른 앱에서 넘어오면 바로 로그인 창).
@@ -209,19 +217,11 @@ $('refreshBtn').addEventListener('click', async () => {
   await load();
 });
 
-function renderView() {
-  $('viewGrid').setAttribute('aria-pressed', String(viewMode === 'grid'));
-  $('viewList').setAttribute('aria-pressed', String(viewMode === 'list'));
-}
-for (const [id, mode] of [['viewGrid', 'grid'], ['viewList', 'list']]) {
-  $(id).addEventListener('click', () => {
-    viewMode = mode; try { localStorage.setItem(VIEW_KEY, mode); } catch { /* 기억 못 해도 이번 화면에서는 바뀐다 */ }
-    renderView(); renderList();
-  });
-}
+// 앱 설명 창: ✕·바깥(어두운 곳) 누르기·Esc로 닫는다.
+$('appClose').addEventListener('click', () => $('appDlg').close());
+$('appDlg').addEventListener('click', e => { if (e.target === $('appDlg')) $('appDlg').close(); });
 
 renderChips();
-renderView();
 // 예전 방식(이 기기에 암호를 기억)으로 편집하던 브라우저는 한 번 허브 로그인으로 바꿔 준다(쿠키가 생겨야 다른 앱도 편집된다).
 async function upgradeLegacy() {
   const legacy = api.getToken();
