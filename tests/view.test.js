@@ -55,12 +55,12 @@ test('public: false면 링크를 숨긴다, https 주소만 링크', () => {
 
 test('격자 칸: 문제가 있으면 그것을, 없으면 사용량을 한 줄로', () => {
   assert.deepEqual(tileInfo(app(), NOW), { tone: 'ok', sub: '30일 3회' });
-  assert.deepEqual(tileInfo({ name: 'x', category: '돈' }, NOW), { tone: 'none', sub: '돈' }); // 방문자(상태를 받지 않음)
+  assert.deepEqual(tileInfo({ name: 'x', category: '돈' }, NOW), { tone: 'none', sub: '' }); // 방문자(상태를 받지 않음), 분류는 칩으로
   assert.deepEqual(tileInfo(app({ state: 'down', okAt: day(2.5), usage: null }), NOW), { tone: 'bad', sub: '응답 없음 3일' });
   assert.deepEqual(tileInfo(app({ state: 'legacy', usage: null }), NOW), { tone: 'warn', sub: '허브 준비 전' });
   assert.deepEqual(tileInfo(app({ usage: { last30d: 0, lastUsedAt: day(40) } }), NOW), { tone: 'muted', sub: '쉬는 중' });
   assert.deepEqual(tileInfo(app({ hidden: true }), NOW), { tone: 'ok', sub: '30일 3회' }); // 숨김 표시는 칸 흐림으로만
-  assert.deepEqual(tileInfo(app({ usage: null, category: '돈' }), NOW), { tone: 'ok', sub: '돈' });
+  assert.deepEqual(tileInfo(app({ usage: null, category: '돈' }), NOW), { tone: 'ok', sub: '' }); // 분류는 칸 아래에 쓰지 않는다(칩으로 구분)
 });
 
 test('분류 칩: 앱이 있는 분류만 정해진 순서로, 분류가 하나뿐이면 칩 없음', () => {

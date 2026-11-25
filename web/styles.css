@@ -3,6 +3,7 @@
   --bg:#f3f5f7; --surface:#ffffff; --sunk:#e9edf1; --line:#d5dce3;
   --fg:#16202b; --muted:#5b6876; --accent:#1f5f8b; --accent-soft:#dbe8f2;
   --ok:#1d7a4f; --ok-soft:#dcf0e5; --warn:#a86a07; --warn-soft:#f7ead0; --bad:#b4372b; --bad-soft:#f6dcd8;
+  --scrim:rgba(15,20,25,.45);
   --sans:"IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
   --mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
 }
@@ -10,17 +11,19 @@
   --bg:#0f1419; --surface:#171e25; --sunk:#1f2830; --line:#2c3843;
   --fg:#e3e9ef; --muted:#93a1ae; --accent:#6aaee0; --accent-soft:#1c3446;
   --ok:#55c08a; --ok-soft:#173326; --warn:#e2a945; --warn-soft:#3a2d14; --bad:#ec7a6c; --bad-soft:#3d1f1b;
+  --scrim:rgba(0,0,0,.6);
   color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0f1419; --surface:#171e25; --sunk:#1f2830; --line:#2c3843;
   --fg:#e3e9ef; --muted:#93a1ae; --accent:#6aaee0; --accent-soft:#1c3446;
   --ok:#55c08a; --ok-soft:#173326; --warn:#e2a945; --warn-soft:#3a2d14; --bad:#ec7a6c; --bad-soft:#3d1f1b;
+  --scrim:rgba(0,0,0,.6);
   color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--sans);font-size:15px;line-height:1.55;
   /* 한글은 단어(띄어쓰기) 단위로 줄을 바꾼다(기본값은 글자 중간에서 끊김). 긴 주소 등은 넘치기 전에만 자른다. */
-  word-break:keep-all;overflow-wrap:anywhere}
+  word-break:keep-all;overflow-wrap:break-word}
 /* 폰(400px)이 기준. 좌우 여백은 최소 16px, 페이지 전체가 가로로 밀리면 안 된다. */
 .wrap{max-width:960px;margin:0 auto;padding-block:20px 48px;
   padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));
@@ -117,7 +120,15 @@ a.tile:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-r
 .tile-name{font-size:.84rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;padding:0 2px}
 .tile-sub{font-size:.7rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:center;color:var(--muted)}
 .tone-text-bad{color:var(--bad)} .tone-text-warn{color:var(--warn)}
-/* 맨 아래 "관리"(주인 로그인 입구): 방문자 눈에 띄지 않게 작게 */
-.foot{margin-top:40px;display:flex;justify-content:center}
-.linkish{background:none;border:0;color:var(--muted);font-size:.78rem;text-decoration:underline;min-height:44px;padding:8px 12px}
-.linkish:hover{color:var(--fg)}
+/* 제목 "앱 허브" = 주인 로그인 입구. 겉보기는 그냥 제목이다. */
+.title-btn{background:none;border:0;padding:0;min-height:0;font:inherit;color:inherit;cursor:pointer;border-radius:6px}
+.title-btn:hover{border:0}
+.title-btn:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+/* 로그인 창(가운데 뜨는 상자) */
+.dlg{border:1px solid var(--line);border-radius:12px;background:var(--surface);color:var(--fg);padding:20px;width:min(360px, calc(100vw - 32px))}
+.dlg::backdrop{background:var(--scrim)}
+.dlg form{display:flex;flex-direction:column;gap:10px}
+.dlg label{font-size:.78rem;color:var(--muted);font-weight:500}
+.dlg #loginMsg:empty{display:none}
+.dlg-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:4px}

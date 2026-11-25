@@ -19,23 +19,32 @@
 <div class="wrap">
   <header class="head">
     <div class="head-row">
-      <h1>앱 허브</h1>
+      <!-- 제목을 누르면 주인 로그인 창(방문자 눈에는 그냥 제목) -->
+      <h1><button type="button" id="titleBtn" class="title-btn">앱 허브</button></h1>
       <div class="head-actions">
         <div class="seg" role="group" aria-label="보기 방식">
-          <button type="button" id="viewGrid" aria-pressed="true">격자</button>
-          <button type="button" id="viewList" aria-pressed="false">목록</button>
+          <button type="button" id="viewList" aria-pressed="true">목록</button>
+          <button type="button" id="viewGrid" aria-pressed="false">격자</button>
         </div>
         <button type="button" id="editBtn" class="ghost" hidden>잠그기</button>
       </div>
     </div>
-    <p class="sub" id="summary" aria-live="polite">불러오는 중</p>
+    <p class="sub" id="summary" aria-live="polite" hidden></p>
   </header>
 
-  <form class="token" id="tokenForm" hidden>
-    <label for="tokenIn" id="tokenLabel">편집 암호</label>
-    <input id="tokenIn" type="password" autocomplete="current-password" required>
-    <button class="primary" type="submit">확인</button>
-  </form>
+  <!-- 주인 로그인 창: 제목("앱 허브")을 누르거나, 다른 앱에서 "허브에서 로그인"으로 넘어오면(?login=1) 뜬다 -->
+  <dialog class="dlg" id="loginDlg" aria-labelledby="loginTitle">
+    <form id="tokenForm">
+      <h2 id="loginTitle">허브 로그인</h2>
+      <p class="hint" id="loginMsg"></p>
+      <label for="tokenIn" id="tokenLabel">편집 암호</label>
+      <input id="tokenIn" type="password" autocomplete="current-password" required>
+      <div class="dlg-actions">
+        <button type="button" id="loginCancel">취소</button>
+        <button class="primary" type="submit">확인</button>
+      </div>
+    </form>
+  </dialog>
 
   <div class="edit-bar" id="editBar" hidden>
     <div class="edit-actions">
@@ -50,8 +59,6 @@
   <p class="hint" id="status" role="status" aria-live="polite"></p>
 
   <main class="list" id="list"></main>
-
-  <footer class="foot"><button type="button" id="adminLink" class="linkish">관리</button></footer>
 </div>
 <script type="module" src="js/app.js"></script>
 </body>

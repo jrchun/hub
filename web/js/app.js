@@ -11,8 +11,11 @@ let apps = [], canEdit = false, category = '전체', firstTime = false;
 const params = new URLSearchParams(location.search);
 const returnTo = params.get('return') || '';
 const wantLogin = params.get('login') === '1';
-// 보기 방식: 'grid'(3×3 격자) | 'list'(큰 카드). 이 기기에 기억한다.
-let viewMode = (() => { try { return localStorage.getItem('hub-view') || 'grid'; } catch { return 'grid'; } })();
+// 보기 방식: 'list'(큰 카드, 기본) | 'grid'(격자). 이 기기에 기억한다.
+// 기억 칸 이름을 바꿔서(hub-view → hub-view2) 예전에 격자를 고른 기기도 한 번은 목록으로 시작한다.
+const VIEW_KEY = 'hub-view2';
+let viewMode = (() => { try { return localStorage.getItem(VIEW_KEY) || 'list'; } catch { return 'list'; } })();
+const loginMsg = text => { $('loginMsg').textContent = text; };
 const status = text => { $('status').textContent = text; };
 
 function renderChips() {
@@ -31,8 +34,9 @@ function renderChips() {
 
 function renderSummary() {
   const s = summarize(apps);
-  // 방문자에게는 개수만(상태는 주인만 본다)
-  $('summary').textContent = canEdit ? `내 앱 ${s.total}개 · 정상 ${s.ok} · 응답 없음 ${s.down}` : `앱 ${s.total}개`;
+  // 방문자에게는 안 보인다(상태는 주인만 본다)
+  $('summary').hidden = !canEdit;
+  $('summary').textContent = canEdit ? `내 앱 ${s.total}개 · 정상 ${s.ok} · 응답 없음 ${s.down}` : '';
 }
 
 function shot(app) {
@@ -63,7 +67,6 @@ function card(app) {
 
   const tags = el('div', 'tags');
   if (app.status) tags.append(el('span', 'pill pill-status s-' + ({ 운영중: 'live', 개발중: 'dev', 중단: 'stop' }[app.status]), app.status));
-  if (app.category) tags.append(el('span', 'pill', app.category));
   if (canEdit) for (const b of badges(app)) tags.append(el('span', 'pill tone-' + b.tone, b.text));
   if (tags.childElementCount) body.append(tags);
   if (canEdit) body.append(el('p', 'card-usage', usageText(app)));
@@ -112,7 +115,8 @@ function tile(app) {
   const { tone, sub } = tileInfo(app);
   const s = shot(app); s.classList.add('tile-shot');
   if (tone !== 'none') { const dot = el('span', 'tile-dot dot-' + tone); dot.setAttribute('aria-hidden', 'true'); s.append(dot); }
-  t.append(s, el('span', 'tile-name', displayName(app)), el('span', 'tile-sub tone-text-' + tone, sub));
+  t.append(s, el('span', 'tile-name', displayName(app)));
+  if (sub) t.append(el('span', 'tile-sub tone-text-' + tone, sub)); // 주인에게만(상태·사용량)
   t.title = [displayName(app), app.summary, canEdit ? usageText(app) : ''].filter(Boolean).join('\n');
   return t;
 }
@@ -128,12 +132,11 @@ function renderList() {
   for (const a of shown) list.append(viewMode === 'grid' ? tile(a) : card(a));
 }
 
-// 방문자: 카드만 보이고 "편집" 버튼은 없다. 주인은 맨 아래 작은 "관리"로 로그인한다(다른 앱에서 넘어오면 바로 로그인 칸).
+// 방문자: 카드만 보이고 관리 버튼은 없다. 주인은 제목 "앱 허브"를 눌러 로그인한다(다른 앱에서 넘어오면 바로 로그인 창).
 function renderEdit() {
   $('editBar').hidden = !canEdit;
   $('editBtn').hidden = !canEdit;
   $('editBtn').textContent = '잠그기';
-  $('adminLink').hidden = canEdit;
 }
 
 async function load() {
@@ -150,30 +153,33 @@ async function load() {
 
 $('editBtn').addEventListener('click', async () => {
   if (canEdit) { // 잠그기 = 로그아웃(이 브라우저에서. 다른 앱도 같이 잠긴다)
-    await api.logout(); canEdit = false; $('tokenForm').hidden = true;
+    await api.logout(); canEdit = false;
     status('로그아웃했습니다. 다른 앱도 이 브라우저에서는 같이 잠깁니다.'); await load(); return;
   }
   await openLogin();
 });
 
-$('adminLink').addEventListener('click', () => openLogin(true));
+// 제목을 누르면 로그인 창. 이미 로그인했으면 아무 일도 없다(관리 버튼이 이미 보인다).
+$('titleBtn').addEventListener('click', () => { if (!canEdit) openLogin(); });
+$('loginCancel').addEventListener('click', () => $('loginDlg').close());
 
 $('logoutAll').addEventListener('click', async () => {
   await api.logout(true); canEdit = false;
   status('모든 기기·브라우저에서 로그아웃했습니다.'); await load();
 });
 
-async function openLogin(force) {
+async function openLogin() {
   const s = await api.getStatus().catch(() => ({}));
   firstTime = s.passwordSet === false;
   const min = s.passwordMinLength || 6;
   $('tokenLabel').textContent = firstTime ? `편집 암호 정하기(${min}자 이상)` : '편집 암호';
   $('tokenIn').autocomplete = firstTime ? 'new-password' : 'current-password';
   $('tokenIn').minLength = firstTime ? min : 0;
-  status(firstTime ? '아직 편집 암호가 없습니다. 앞으로 쓸 편집 암호를 정해 주세요. 다른 기기에서도 이 암호로 고칩니다.' : '');
-  if (!firstTime && returnTo) status('허브에 로그인하면 원래 앱으로 돌아가 바로 저장할 수 있습니다. 이 브라우저에서는 다른 앱도 다시 묻지 않습니다.');
-  $('tokenForm').hidden = force ? false : !$('tokenForm').hidden;
-  if (!$('tokenForm').hidden) $('tokenIn').focus();
+  $('tokenIn').value = '';
+  loginMsg(firstTime ? '아직 편집 암호가 없습니다. 앞으로 쓸 편집 암호를 정해 주세요. 다른 기기에서도 이 암호로 고칩니다.'
+    : returnTo ? '로그인하면 원래 앱으로 돌아가 바로 저장할 수 있습니다. 이 브라우저에서는 다른 앱도 다시 묻지 않습니다.' : '');
+  if (!$('loginDlg').open) $('loginDlg').showModal();
+  $('tokenIn').focus();
 }
 
 $('tokenForm').addEventListener('submit', async e => {
@@ -181,14 +187,14 @@ $('tokenForm').addEventListener('submit', async e => {
   const t = $('tokenIn').value.trim(); $('tokenIn').value = '';
   if (firstTime) {
     const r = await api.claimPassword(t).catch(() => ({ ok: false, detail: '서버에 연결하지 못했습니다.' }));
-    if (!r.ok && !r.taken) { status(r.detail); return; }
-    if (r.taken) { firstTime = false; $('tokenLabel').textContent = '편집 암호'; status('편집 암호가 이미 정해져 있습니다. 그 암호를 입력해 주세요.'); return; }
+    if (!r.ok && !r.taken) { loginMsg(r.detail); return; }
+    if (r.taken) { firstTime = false; $('tokenLabel').textContent = '편집 암호'; loginMsg('편집 암호가 이미 정해져 있습니다. 그 암호를 입력해 주세요.'); return; }
   }
   const r = await api.login(t, returnTo).catch(() => ({ ok: false, detail: '서버에 연결하지 못했습니다.' }));
-  if (!r.ok) { status(r.status === 401 ? '편집 암호가 맞지 않습니다. 다시 입력해 주세요.' : r.detail); return; }
-  if (r.next) { status('로그인했습니다. 원래 앱으로 돌아갑니다…'); location.href = r.next; return; }
+  if (!r.ok) { loginMsg(r.status === 401 ? '편집 암호가 맞지 않습니다. 다시 입력해 주세요.' : r.detail); $('tokenIn').focus(); return; }
+  if (r.next) { loginMsg('로그인했습니다. 원래 앱으로 돌아갑니다…'); location.href = r.next; return; }
+  $('loginDlg').close();
   await load();
-  $('tokenForm').hidden = true;
   status(firstTime ? '편집 암호를 정하고 로그인했습니다. woongstudio.com의 다른 앱에서도 바로 편집할 수 있습니다.' : '로그인했습니다. woongstudio.com의 다른 앱에서도 바로 편집할 수 있습니다.');
   firstTime = false;
 });
@@ -209,7 +215,7 @@ function renderView() {
 }
 for (const [id, mode] of [['viewGrid', 'grid'], ['viewList', 'list']]) {
   $(id).addEventListener('click', () => {
-    viewMode = mode; try { localStorage.setItem('hub-view', mode); } catch { /* 기억 못 해도 이번 화면에서는 바뀐다 */ }
+    viewMode = mode; try { localStorage.setItem(VIEW_KEY, mode); } catch { /* 기억 못 해도 이번 화면에서는 바뀐다 */ }
     renderView(); renderList();
   });
 }
@@ -224,4 +230,4 @@ async function upgradeLegacy() {
   api.rememberToken('');
   if (r.ok) status('허브 로그인으로 바꿨습니다. 이 브라우저에서는 woongstudio.com의 다른 앱도 바로 편집할 수 있습니다.');
 }
-upgradeLegacy().then(load).then(r => { if (wantLogin && r && !r.canEdit) openLogin(true); else if (wantLogin && r && r.canEdit && returnTo) status('이미 로그인돼 있습니다. 원래 앱으로 돌아가 저장하면 됩니다.'); });
+upgradeLegacy().then(load).then(r => { if (wantLogin && r && !r.canEdit) openLogin(); else if (wantLogin && r && r.canEdit && returnTo) status('이미 로그인돼 있습니다. 원래 앱으로 돌아가 저장하면 됩니다.'); });
