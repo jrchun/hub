@@ -296,6 +296,8 @@ test('목록·숨기기·삭제: 편집 암호가 없으면 401, 숨긴 앱은 �
 
   let j = await (await call('GET', '/api/apps')).json();
   assert.equal(j.canEdit, false); assert.equal(j.apps.length, 2);
+  // 방문자에게는 카드에 필요한 값만(상태·실패 횟수·확인 시각·사용 기록·숨김은 안 보냄)
+  assert.deepEqual(Object.keys(j.apps.find(x => x.url === a)).sort(), ['category', 'emoji', 'hasMeta', 'image', 'name', 'public', 'status', 'summary', 'url']);
   assert.equal((await call('PUT', '/api/apps', { url: a, hidden: true })).status, 401);
   assert.equal((await call('PUT', '/api/apps', { url: a, hidden: true }, 'wrong')).status, 401);
   assert.equal((await call('PUT', '/api/apps', { url: a, hidden: true }, 'secret')).status, 200);
@@ -306,6 +308,7 @@ test('목록·숨기기·삭제: 편집 암호가 없으면 401, 숨긴 앱은 �
   assert.deepEqual(j.apps.map(x => x.url), [b]);           // 숨긴 앱은 빠진다
   j = await (await call('GET', '/api/apps', null, 'secret')).json();
   assert.equal(j.canEdit, true); assert.equal(j.apps.length, 2);
+  assert.ok('usage' in j.apps[0] && 'state' in j.apps[0]); // 주인에게는 전부
   assert.equal(j.apps.find(x => x.url === a).hidden, true);
 
   assert.equal((await call('DELETE', '/api/apps?url=' + encodeURIComponent(b))).status, 401);

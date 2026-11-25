@@ -1,14 +1,15 @@
-// GET    /api/apps                 → {apps, canEdit}  (편집 암호가 없으면 숨긴 앱은 빼고 보낸다)
+// GET    /api/apps                 → {apps, canEdit}  (로그인 안 한 사람: 숨긴 앱은 빼고, 카드에 필요한 값만 보낸다)
 // PUT    /api/apps {url, hidden}   → {ok}             편집 암호 필요(401). 숨기기/보이기
 // DELETE /api/apps?url=<주소>      → {ok}             편집 암호 필요(401). 삭제(화면에서 한 번 더 확인한다)
 import { json, canWrite, logUsage } from '../lib/http.js';
-import { normalizeUrl, toView } from '../lib/hub.js';
+import { normalizeUrl, toView, publicView } from '../lib/hub.js';
 import { listApps } from '../lib/store.js';
 
 export async function GET({ request, env }) {
   const canEdit = await canWrite(request, env);
   if (canEdit) await logUsage(env, 'open');
-  const apps = (await listApps(env)).map(toView).filter(a => canEdit || !a.hidden);
+  const all = (await listApps(env)).map(toView);
+  const apps = canEdit ? all : all.filter(a => !a.hidden).map(publicView);
   return json({ apps, canEdit });
 }
 

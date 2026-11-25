@@ -28,7 +28,8 @@ function renderChips() {
 
 function renderSummary() {
   const s = summarize(apps);
-  $('summary').textContent = `내 앱 ${s.total}개 · 정상 ${s.ok} · 응답 없음 ${s.down}`;
+  // 방문자에게는 개수만(상태는 주인만 본다)
+  $('summary').textContent = canEdit ? `내 앱 ${s.total}개 · 정상 ${s.ok} · 응답 없음 ${s.down}` : `앱 ${s.total}개`;
 }
 
 function shot(app) {
@@ -60,9 +61,9 @@ function card(app) {
   const tags = el('div', 'tags');
   if (app.status) tags.append(el('span', 'pill pill-status s-' + ({ 운영중: 'live', 개발중: 'dev', 중단: 'stop' }[app.status]), app.status));
   if (app.category) tags.append(el('span', 'pill', app.category));
-  for (const b of badges(app)) tags.append(el('span', 'pill tone-' + b.tone, b.text));
+  if (canEdit) for (const b of badges(app)) tags.append(el('span', 'pill tone-' + b.tone, b.text));
   if (tags.childElementCount) body.append(tags);
-  body.append(el('p', 'card-usage num', usageText(app)));
+  if (canEdit) body.append(el('p', 'card-usage num', usageText(app)));
   if (!href) body.append(el('p', 'card-note', '링크 숨김(공개 안 함)'));
 
   main.append(shot(app), body);
@@ -107,10 +108,9 @@ function tile(app) {
   if (href) { t.href = href; t.target = '_blank'; t.rel = 'noopener noreferrer'; }
   const { tone, sub } = tileInfo(app);
   const s = shot(app); s.classList.add('tile-shot');
-  const dot = el('span', 'tile-dot dot-' + tone); dot.setAttribute('aria-hidden', 'true');
-  s.append(dot);
+  if (tone !== 'none') { const dot = el('span', 'tile-dot dot-' + tone); dot.setAttribute('aria-hidden', 'true'); s.append(dot); }
   t.append(s, el('span', 'tile-name', displayName(app)), el('span', 'tile-sub tone-text-' + tone, sub));
-  t.title = [displayName(app), app.summary, usageText(app)].filter(Boolean).join('\n');
+  t.title = [displayName(app), app.summary, canEdit ? usageText(app) : ''].filter(Boolean).join('\n');
   return t;
 }
 
@@ -125,9 +125,12 @@ function renderList() {
   for (const a of shown) list.append(viewMode === 'grid' ? tile(a) : card(a));
 }
 
+// 방문자: 카드만 보이고 "편집" 버튼은 없다. 주인은 맨 아래 작은 "관리"로 로그인한다(다른 앱에서 넘어오면 바로 로그인 칸).
 function renderEdit() {
   $('editBar').hidden = !canEdit;
-  $('editBtn').textContent = canEdit ? '잠그기' : '편집';
+  $('editBtn').hidden = !canEdit;
+  $('editBtn').textContent = '잠그기';
+  $('adminLink').hidden = canEdit;
 }
 
 async function load() {
@@ -149,6 +152,8 @@ $('editBtn').addEventListener('click', async () => {
   }
   await openLogin();
 });
+
+$('adminLink').addEventListener('click', () => openLogin(true));
 
 $('logoutAll').addEventListener('click', async () => {
   await api.logout(true); canEdit = false;

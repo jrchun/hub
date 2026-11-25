@@ -25,7 +25,7 @@
           <button type="button" id="viewGrid" aria-pressed="true">격자</button>
           <button type="button" id="viewList" aria-pressed="false">목록</button>
         </div>
-        <button type="button" id="editBtn" class="ghost">편집</button>
+        <button type="button" id="editBtn" class="ghost" hidden>잠그기</button>
       </div>
     </div>
     <p class="sub num" id="summary" aria-live="polite">불러오는 중</p>
@@ -48,6 +48,8 @@
   <p class="hint" id="status" role="status" aria-live="polite"></p>
 
   <main class="list" id="list"></main>
+
+  <footer class="foot"><button type="button" id="adminLink" class="linkish">관리</button></footer>
 </div>
 <script type="module" src="js/app.js"></script>
 </body>
