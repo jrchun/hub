@@ -2,7 +2,7 @@
 
 화면을 고도화할 때 이 문서를 먼저 본다. 세 라이브러리는 모두 **React 전용**이라 이 저장소(빌드 없는 정적 화면, React·번들러·CSS 프레임워크 금지)에 설치하지 않는다.
 대신 그 안의 **설계 규칙**(색 변수 이름 짓기, 상태 표시, 키보드·초점 동작, 등장·퇴장 움직임)을 그대로 따라 순수 HTML·CSS·JS로 만든다.
-디자인 분위기("꼬마 앱 공장", CLAUDE.md)는 바꾸지 않는다. 이 문서는 "어떻게 동작해야 하나"의 기준이다.
+디자인 분위기("세이지 내추럴", CLAUDE.md)는 바꾸지 않는다. 이 문서는 "어떻게 동작해야 하나"의 기준이다.
 
 확인한 판(2026-11-25): shadcn 저장소 `main`(apps/v4), `@base-ui/react` 1.9.0(패키지 안 `docs/`), `@radix-ui/react-dialog` 1.3.1 · `react-toggle-group` 1.2.1 · `react-roving-focus` 1.2.1 · `react-tooltip` 1.4.1(코드).
 공식 사이트(ui.shadcn.com, base-ui.com, radix-ui.com)는 클라우드 세션 접속 허용 목록에 없어 막힌다. 다시 볼 때는 아래 "다시 확인하는 법"대로 npm 패키지와 GitHub 원본 파일로 본다.
@@ -26,12 +26,12 @@
 | `background` / `foreground` | `--bg` / `--fg` | |
 | `card` | `--surface` | 앱 칸·창·관리 줄 |
 | `muted` / `muted-foreground` | `--sunk` / `--muted` | |
-| `primary` / `primary-foreground` | `--accent` / `--accent-ink` | 겨자색 버튼 |
+| `primary` / `primary-foreground` | `--accent` / `--accent-ink` | 초록 주요 버튼 |
 | `accent`(마우스 올림 바탕) | `--accent-soft` | |
 | `destructive` | `--bad`(+`--bad-soft`) | |
-| `border` / `input` | `--line` | 꾸밈 테두리는 `--edge`, 그림자는 `--drop`(우리 고유) |
-| `ring` | `--accent-text` | 초점 테두리 |
-| `radius` | 없음(값이 흩어져 있음) | 고도화 후보: `--radius` 하나로 묶기 |
+| `border` / `input` | `--line` | 그림자는 `--shadow`·`--shadow-lg`(우리 고유) |
+| `ring` | `--accent` | 초점 테두리 |
+| `radius` | `--radius`(→ `--r-sm`~`--r-full`) | |
 
 ## 3. 버튼·배지 종류 이름 (shadcn)
 - 버튼 `variant`: `default`(주요), `secondary`, `outline`, `ghost`, `destructive`, `link`. `size`: `xs`, `sm`, `default`, `lg`, `icon`(정사각형).
